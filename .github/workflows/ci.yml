@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Neovim ${{ matrix.neovim }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        neovim: [stable, nightly]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Neovim
+        uses: rhysd/action-setup-vim@v1.6.1
+        with:
+          version: ${{ matrix.neovim }}
+
+      - name: Run tests
+        run: |
+          nvim --headless -u NONE -i NONE \
+            "+set rtp+=$PWD" \
+            "+luafile tests/run.lua" \
+            +qa
+
+      - name: Validate help tags
+        run: nvim --headless -u NONE -i NONE "+helptags doc" +qa

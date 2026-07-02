@@ -1,0 +1,130 @@
+*obsidian-tasks.nvim*                      Obsidian task files inside Neovim
+
+=============================================================================
+CONTENTS                                              *obsidian-tasks-contents*
+
+1. Introduction ............................... |obsidian-tasks-introduction|
+2. Setup .............................................. |obsidian-tasks-setup|
+3. Commands ........................................ |obsidian-tasks-commands|
+4. Task view ...................................... |obsidian-tasks-task-view|
+5. Markdown format ................................. |obsidian-tasks-format|
+6. Configuration ................................... |obsidian-tasks-config|
+
+=============================================================================
+INTRODUCTION                                      *obsidian-tasks-introduction*
+
+obsidian-tasks.nvim displays and updates Markdown checkbox tasks from one or
+more Obsidian vaults. Markdown files remain the only source of truth. No
+external dependency or database is required.
+
+Requirements: Neovim 0.10 or newer.
+
+=============================================================================
+SETUP                                                      *obsidian-tasks-setup*
+
+Call setup() with at least one repository: >lua
+
+  require("obsidian-tasks").setup({
+    repositories = {
+      {
+        name = "personal",
+        path = "~/notes/personal/Tasks.md",
+      },
+      {
+        name = "work",
+        vault = "~/notes/work",
+        todo_file = "Projects/Tasks.md",
+      },
+    },
+    mappings = {
+      open = "<leader>to",
+      create = "<leader>ta",
+    },
+  })
+<
+A repository supports either a direct `path` or `vault` plus `todo_file`.
+
+=============================================================================
+COMMANDS                                                *obsidian-tasks-commands*
+
+                                                     *:ObsidianTasks*
+:ObsidianTasks              Open configured tasks.
+
+                                               *:ObsidianTasksCreate*
+:ObsidianTasksCreate        Start the guided task creation flow.
+
+                                              *:ObsidianTasksRefresh*
+:ObsidianTasksRefresh       Reload all open task views from disk.
+
+=============================================================================
+TASK VIEW                                              *obsidian-tasks-task-view*
+
+Default mappings inside a task view:
+
+  <Space>    Toggle the task and its completion date.
+  <CR>       Edit the source Markdown at the task line.
+  s          Cycle active, done, and all statuses.
+  r          Refresh from disk.
+  q          Close the view.
+  <Esc>      Close the view.
+
+Floating views close when focus moves to another window by default. Set
+`view.close_on_leave` to false to keep them open.
+
+=============================================================================
+MARKDOWN FORMAT                                            *obsidian-tasks-format*
+
+Supported tasks are ordinary Markdown checkboxes: >markdown
+
+  ## #work
+
+  - [ ] Ship release #work #frontend #urgent 📅 2026-07-10
+  - [x] Fix regression #work #backend ✅ 2026-07-02
+<
+Tags are grouped from left to right. The first example is rendered under
+`#work`, then `#frontend`, then `#urgent`. If inline tags are absent, the
+nearest `## #tag` heading is used. YAML frontmatter and fenced code are
+ignored.
+
+=============================================================================
+CONFIGURATION                                            *obsidian-tasks-config*
+
+The complete defaults are: >lua
+
+  {
+    repositories = {},
+    view = {
+      type = "float",                 -- "float" or "window"
+      width = 0.5,
+      height = 0.5,
+      border = "rounded",
+      title = " Obsidian tasks ",
+      close_on_leave = true,
+      repository_mode = "sections",  -- "sections" or "tabs"
+      window_command = "botright new",
+      status = "active",             -- "active", "done", or "all"
+    },
+    creation = {
+      default_start_today = true,
+      prompt_additional_tags = true,
+      infinity_marker = "♾️",
+    },
+    completion = {
+      marker = "✅",
+      date_format = "%Y-%m-%d",
+    },
+    mappings = {
+      open = nil,
+      create = nil,
+      toggle = "<Space>",
+      edit = "<CR>",
+      refresh = "r",
+      close = { "q", "<Esc>" },
+      cycle_status = "s",
+    },
+  }
+<
+`repository_mode = "sections"` renders repositories in one buffer.
+`repository_mode = "tabs"` creates one tabpage per repository.
+
+vim:tw=78:ts=8:noet:ft=help:norl:
