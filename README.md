@@ -18,7 +18,6 @@
   <a href="#installation">Install</a> ·
   <a href="#configuration">Configure</a> ·
   <a href="#usage">Use</a> ·
-  <a href="README.ru.md">Русская документация</a> ·
   <a href="FUTURE.md">Roadmap</a>
 </p>
 

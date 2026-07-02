@@ -4,6 +4,10 @@ All notable changes to this project will be documented here.
 
 ## [Unreleased]
 
+### Changed
+
+- Consolidated all project documentation in English.
+
 ## [0.1.0] - 2026-07-02
 
 ### Added

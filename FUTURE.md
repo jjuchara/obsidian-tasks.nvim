@@ -1,43 +1,44 @@
-# Задачи на будущее
+# Roadmap
 
-## Надёжность и совместимость
+This document tracks ideas that are intentionally outside the current core release. Items are not ordered commitments and may change as the plugin evolves.
 
-- Добавить optimistic locking по времени изменения и хешу файла, а не только по исходной строке задачи.
-- Сохранять исходные line endings и завершающий перевод строки.
-- Обрабатывать вложенные Markdown-задачи и произвольные checkbox-символы Obsidian Tasks.
-- Добавить настройку синтаксиса дат и маркеров вместо фиксированных emoji.
-- Проверять и нормализовать даты при создании задачи.
-- Добавить тесты для iCloud-конфликтов, отсутствующих файлов и read-only vault.
+## Reliability and compatibility
 
-## Представление и навигация
+- Add optimistic locking based on file modification time and content hashes instead of relying only on the original task line.
+- Preserve source line endings and the presence or absence of a trailing newline.
+- Support nested Markdown tasks and additional checkbox states used by Obsidian Tasks.
+- Make date and marker syntax configurable instead of relying on fixed emoji.
+- Validate and normalize dates during task creation.
+- Add coverage for iCloud conflicts, missing files, and read-only vaults.
 
-- Сворачивать группы тегов через native folds.
-- Добавить сортировку по дедлайну, дате создания, имени и репозиторию.
-- Добавить фильтрацию по тегу, репозиторию и диапазону дат.
-- Показывать overdue и due today отдельными highlight-группами.
-- Сохранять курсор, выбранный фильтр и раскрытые группы после refresh.
-- Добавить preview исходного Markdown-контекста.
-- Рассмотреть необязательные backend для Snacks picker и Telescope.
+## Views and navigation
 
-## Редактирование
+- Collapse tag groups with native folds.
+- Sort tasks by deadline, creation date, title, or repository.
+- Filter by tag, repository, and date range.
+- Highlight overdue tasks and tasks due today.
+- Preserve the cursor, active filter, and expanded groups after refresh.
+- Preview the surrounding Markdown source.
+- Explore optional Snacks picker and Telescope integrations.
 
-- Редактировать текст, теги и даты задачи прямо из task view.
-- Перемещать задачу между репозиториями и тегами.
-- Поддержать массовое переключение выбранных задач.
-- Добавить удаление с подтверждением и undo последней операции.
-- Сделать шаблоны задач и настраиваемый flow создания.
+## Editing
 
-## Интеграция с Obsidian
+- Edit task text, tags, and dates directly from the task view.
+- Move tasks between repositories and tag groups.
+- Toggle multiple selected tasks in one operation.
+- Add confirmed deletion and undo for the latest operation.
+- Support task templates and configurable creation workflows.
 
-- Открывать задачу через `obsidian://open` с корректным URL encoding на macOS/Linux/Windows.
-- Поддержать формат Obsidian Tasks community plugin и его recurrence.
-- Добавить filesystem watcher с debounce для автоматического обновления view.
-- Научиться собирать задачи из нескольких файлов одного vault по glob-шаблону.
+## Obsidian integration
 
-## Качество плагина
+- Open tasks through `obsidian://open` with correct URL encoding on macOS, Linux, and Windows.
+- Support recurrence and the extended syntax of the Obsidian Tasks community plugin.
+- Add a debounced filesystem watcher for automatic view refreshes.
+- Collect tasks from multiple files in one vault through glob patterns.
 
-- Добавить CI для поддерживаемых версий Neovim.
-- Добавить полноценные unit/integration tests и минимальную тестовую fixture.
-- Подключить `stylua` и `luacheck`/`selene`.
-- Оформить help-документацию `:help obsidian-tasks`.
-- Подготовить репозиторий к публикации и добавить лицензию.
+## Project quality
+
+- Expand unit and integration coverage with larger fixture vaults.
+- Add StyLua and Selene checks to CI.
+- Publish stable releases with migration notes and compatibility guarantees.
+- Add a minimal reproduction template for bug reports.
