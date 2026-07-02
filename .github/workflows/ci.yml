@@ -26,6 +26,7 @@ jobs:
         uses: rhysd/action-setup-vim@v1.6.1
         with:
           version: ${{ matrix.neovim }}
+          neovim: true
 
       - name: Run tests
         run: |
