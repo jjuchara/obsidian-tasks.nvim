@@ -1,4 +1,5 @@
 local config_module = require("obsidian-tasks.config")
+local date = require("obsidian-tasks.date")
 local parser = require("obsidian-tasks.parser")
 local repository = require("obsidian-tasks.repository")
 local ui = require("obsidian-tasks.ui")
@@ -62,7 +63,7 @@ local function select_additional_tags(callback)
 end
 
 local function build_task_line(name, tags, start_date, due_date)
-  local today = os.date("%Y-%m-%d")
+  local today = date.today()
   local line = "- [ ] " .. name
   if #tags > 0 then
     line = line .. " " .. table.concat(tags, " ")
@@ -73,6 +74,30 @@ local function build_task_line(name, tags, start_date, due_date)
   end
   line = line .. (due_date and (" 📅 " .. due_date) or (" " .. config.creation.infinity_marker))
   return line
+end
+
+local function prompt_date(prompt, default, allow_empty, callback)
+  vim.ui.input({ prompt = prompt }, function(input)
+    if input == nil then
+      return
+    end
+    local value = vim.trim(input)
+    if value == "" then
+      if default then
+        callback(default)
+      elseif allow_empty then
+        callback(nil)
+      end
+      return
+    end
+    local normalized, error_message = date.parse(value, nil, config.dates.display_format)
+    if not normalized then
+      notify(error_message, vim.log.levels.ERROR)
+      prompt_date(prompt, default, allow_empty, callback)
+      return
+    end
+    callback(normalized)
+  end)
 end
 
 local function create_in(repo)
@@ -89,27 +114,27 @@ local function create_in(repo)
             seen[tag] = true
           end
         end
-        local today = os.date("%Y-%m-%d")
+        local today = date.today()
         local start_default = config.creation.default_start_today and today or ""
-        vim.ui.input({ prompt = "Start date [" .. start_default .. "]: " }, function(start_input)
-          if start_input == nil then
-            return
-          end
-          local start_date = start_input ~= "" and start_input or (start_default ~= "" and start_default or nil)
-          vim.ui.input({ prompt = "Due date [empty = no deadline]: " }, function(due_input)
-            if due_input == nil then
-              return
-            end
-            local line = build_task_line(name, tags, start_date, due_input ~= "" and due_input or nil)
-            local ok, error_message = repository.append(repo, { line = line, tags = tags })
-            if not ok then
-              notify(error_message, vim.log.levels.ERROR)
-              return
-            end
-            notify("task added to " .. repo.name .. ": " .. table.concat(tags, " → "))
-            ui.refresh_all()
+        local start_default_display =
+          start_default ~= "" and date.format(start_default, config.dates.display_format) or ""
+        local due_example = date.format(assert(date.add_days(today, 1)), config.dates.display_format)
+        prompt_date(
+          "Start date [" .. start_default_display .. "]: ",
+          start_default ~= "" and start_default or nil,
+          true,
+          function(start_date)
+            prompt_date("Due date [e.g. " .. due_example .. "; empty = no deadline]: ", nil, true, function(due_date)
+              local line = build_task_line(name, tags, start_date, due_date)
+              local ok, error_message = repository.append(repo, { line = line, tags = tags })
+              if not ok then
+                notify(error_message, vim.log.levels.ERROR)
+                return
+              end
+              notify("task added to " .. repo.name .. ": " .. table.concat(tags, " → "))
+              ui.refresh_all()
+            end)
           end)
-        end)
       end)
     end)
   end)
@@ -144,6 +169,17 @@ end
 function M.refresh()
   ensure_setup()
   ui.refresh_all()
+end
+
+function M.sort(mode)
+  ensure_setup()
+  local selected = mode or ui.next_sort(config.view.sort)
+  if not vim.tbl_contains({ "source", "deadline", "title" }, selected) then
+    error("obsidian-tasks: sort must be 'source', 'deadline', or 'title'", 2)
+  end
+  config.view.sort = selected
+  ui.set_sort_all(selected)
+  notify("sort: " .. selected)
 end
 
 return M

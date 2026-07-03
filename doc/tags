@@ -1,6 +1,7 @@
 :ObsidianTasks	obsidian-tasks.txt	/*:ObsidianTasks*
 :ObsidianTasksCreate	obsidian-tasks.txt	/*:ObsidianTasksCreate*
 :ObsidianTasksRefresh	obsidian-tasks.txt	/*:ObsidianTasksRefresh*
+:ObsidianTasksSort	obsidian-tasks.txt	/*:ObsidianTasksSort*
 obsidian-tasks-commands	obsidian-tasks.txt	/*obsidian-tasks-commands*
 obsidian-tasks-config	obsidian-tasks.txt	/*obsidian-tasks-config*
 obsidian-tasks-contents	obsidian-tasks.txt	/*obsidian-tasks-contents*

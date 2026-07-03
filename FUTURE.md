@@ -8,16 +8,14 @@ This document tracks ideas that are intentionally outside the current core relea
 - Preserve source line endings and the presence or absence of a trailing newline.
 - Support nested Markdown tasks and additional checkbox states used by Obsidian Tasks.
 - Make date and marker syntax configurable instead of relying on fixed emoji.
-- Validate and normalize dates during task creation.
 - Add coverage for iCloud conflicts, missing files, and read-only vaults.
 
 ## Views and navigation
 
 - Collapse tag groups with native folds.
-- Sort tasks by deadline, creation date, title, or repository.
+- Extend sorting with creation date and repository modes.
 - Filter by tag, repository, and date range.
-- Highlight overdue tasks and tasks due today.
-- Preserve the cursor, active filter, and expanded groups after refresh.
+- Preserve the active filter and expanded groups after refresh.
 - Preview the surrounding Markdown source.
 - Explore optional Snacks picker and Telescope integrations.
 

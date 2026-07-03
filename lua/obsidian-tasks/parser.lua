@@ -55,6 +55,8 @@ function M.parse_lines(lines, repository)
               text = text,
               done = marker:lower() == "x",
               tags = inline_tags(text, section_tag),
+              created_date = text:match("➕%s*(%d%d%d%d%-%d%d%-%d%d)"),
+              start_date = text:match("🛫%s*(%d%d%d%d%-%d%d%-%d%d)"),
               due_date = text:match("📅%s*(%d%d%d%d%-%d%d%-%d%d)"),
               completion_date = text:match("✅%s*(%d%d%d%d%-%d%d%-%d%d)"),
             }

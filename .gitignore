@@ -3,3 +3,8 @@
 *.swp
 *.swo
 nvim.log
+
+# Local agent configuration
+AGENTS.md
+.agents/
+.codex/

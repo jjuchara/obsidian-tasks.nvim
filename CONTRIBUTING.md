@@ -23,3 +23,31 @@ Before submitting a change:
 4. Update README, help, and changelog when user-facing behavior changes.
 
 Keep modules dependency-free unless a dependency provides a clear benefit that cannot reasonably be implemented with the Neovim API.
+
+## Manual testing with LazyVim
+
+The development launcher loads this working tree in the existing `LazyVim` app profile while redirecting task writes to an isolated resource:
+
+```sh
+./scripts/nvim-dev
+```
+
+The resource persists at `~/.local/state/obsidian-tasks.nvim-dev/Tasks.md`. Restore it from `tests/fixtures/dev-tasks.md` with `./scripts/nvim-dev --reset-resource`. To use another disposable file, set `OBSIDIAN_TASKS_TASK_FILE=/path/to/Tasks.md`.
+
+The LazyVim plugin spec must select its directory and repository from the launcher environment:
+
+```lua
+local dev = vim.env.OBSIDIAN_TASKS_PROFILE == "dev"
+
+{
+  "jjuchara/obsidian-tasks.nvim",
+  dir = dev and vim.env.OBSIDIAN_TASKS_PLUGIN_DIR or nil,
+  opts = {
+    repositories = dev and {
+      { name = "dev", path = vim.env.OBSIDIAN_TASKS_TASK_FILE },
+    } or production_repositories,
+  },
+}
+```
+
+A normal LazyVim launch continues to use the Git checkout and production repositories. Never point the development profile at a production vault when testing write operations.

@@ -96,6 +96,11 @@ require("obsidian-tasks").setup({
     repository_mode = "sections",  -- "sections" or "tabs"
     window_command = "botright new",
     status = "active",             -- "active", "done", or "all"
+    sort = "source",               -- "source", "deadline", or "title"
+  },
+
+  dates = {
+    display_format = "%d.%m.%Y",  -- strftime format used in the task view
   },
 
   creation = {
@@ -106,7 +111,6 @@ require("obsidian-tasks").setup({
 
   completion = {
     marker = "✅",
-    date_format = "%Y-%m-%d",
   },
 
   mappings = {
@@ -117,6 +121,7 @@ require("obsidian-tasks").setup({
     refresh = "r",
     close = { "q", "<Esc>" },
     cycle_status = "s",
+    cycle_sort = "o",
   },
 })
 ```
@@ -130,6 +135,7 @@ require("obsidian-tasks").setup({
 | `:ObsidianTasks` | Open the task view |
 | `:ObsidianTasksCreate` | Start the guided creation flow |
 | `:ObsidianTasksRefresh` | Reload every open task view |
+| `:ObsidianTasksSort [source\|deadline\|title]` | Set sorting, or cycle it without an argument |
 
 ### Task view
 
@@ -138,6 +144,7 @@ require("obsidian-tasks").setup({
 | `<Space>` | Toggle the task under the cursor |
 | `<CR>` | Open the Markdown source at the task line |
 | `s` | Cycle `active → done → all` |
+| `o` | Cycle `source → deadline → title` sorting |
 | `r` | Refresh from disk |
 | `q`, `<Esc>` | Close the view |
 
@@ -149,9 +156,11 @@ A floating view is modal by default: clicking another window closes it. Set `vie
 2. Enter the task text.
 3. Select or create the primary tag.
 4. Add optional tags as `gantt urgent`, `#gantt #urgent`, or `gantt, urgent`.
-5. Confirm the start date and optional deadline.
+5. Confirm the start date and optional deadline. Enter `yesterday`, `today`, `tomorrow`, an ISO date such as `2026-07-10`, or a date matching `dates.display_format`. Leading zeroes are optional, so `7.3.2026` is accepted for `%d.%m.%Y`.
 
 The completion notification shows the persisted tag path, for example `#work → #gantt`.
+Dates are always stored as `YYYY-MM-DD`. `dates.display_format` changes rendered dates and the examples shown in creation prompts without modifying Markdown. Active tasks due today or tomorrow use `ObsidianTasksDueSoon`; overdue tasks use `ObsidianTasksOverdue`.
+Deadline sorting adds virtual `#overdue`, `#due-soon`, and `#on-track` groups. `#due-soon` covers today and tomorrow; later deadlines, completed tasks, and tasks without deadlines are `#on-track`.
 
 ## Markdown format
 

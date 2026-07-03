@@ -56,6 +56,10 @@ COMMANDS                                                *obsidian-tasks-commands
                                               *:ObsidianTasksRefresh*
 :ObsidianTasksRefresh       Reload all open task views from disk.
 
+                                                 *:ObsidianTasksSort*
+:ObsidianTasksSort [mode]   Set source, deadline, or title sorting. With no
+                            mode, cycle to the next sort order.
+
 =============================================================================
 TASK VIEW                                              *obsidian-tasks-task-view*
 
@@ -64,6 +68,7 @@ Default mappings inside a task view:
   <Space>    Toggle the task and its completion date.
   <CR>       Edit the source Markdown at the task line.
   s          Cycle active, done, and all statuses.
+  o          Cycle source, deadline, and title sorting.
   r          Refresh from disk.
   q          Close the view.
   <Esc>      Close the view.
@@ -103,6 +108,10 @@ The complete defaults are: >lua
       repository_mode = "sections",  -- "sections" or "tabs"
       window_command = "botright new",
       status = "active",             -- "active", "done", or "all"
+      sort = "source",               -- "source", "deadline", or "title"
+    },
+    dates = {
+      display_format = "%d.%m.%Y",  -- strftime format for the task view
     },
     creation = {
       default_start_today = true,
@@ -111,7 +120,6 @@ The complete defaults are: >lua
     },
     completion = {
       marker = "✅",
-      date_format = "%Y-%m-%d",
     },
     mappings = {
       open = nil,
@@ -121,10 +129,23 @@ The complete defaults are: >lua
       refresh = "r",
       close = { "q", "<Esc>" },
       cycle_status = "s",
+      cycle_sort = "o",
     },
   }
 <
 `repository_mode = "sections"` renders repositories in one buffer.
 `repository_mode = "tabs"` creates one tabpage per repository.
+
+Creation prompts accept YYYY-MM-DD, dates matching `dates.display_format`,
+`yesterday`, `today`, and `tomorrow`. Dates are always stored as ISO values.
+Leading zeroes in numeric months and days are optional.
+`dates.display_format` changes all creation, start, due, and completion dates
+in the task view and date examples in creation prompts without changing the
+source Markdown. Incomplete tasks due today or tomorrow use
+`ObsidianTasksDueSoon`; overdue tasks use `ObsidianTasksOverdue`.
+
+Deadline sorting adds virtual `#overdue`, `#due-soon`, and `#on-track` groups.
+Due-soon covers today and tomorrow. Later deadlines, completed tasks, and
+tasks without deadlines are on-track.
 
 vim:tw=78:ts=8:noet:ft=help:norl:

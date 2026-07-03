@@ -1,0 +1,26 @@
+#!/bin/sh
+
+set -eu
+
+repository_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+state_home=${XDG_STATE_HOME:-"$HOME/.local/state"}
+task_file=${OBSIDIAN_TASKS_TASK_FILE:-"$state_home/obsidian-tasks.nvim-dev/Tasks.md"}
+
+if [ "${1:-}" = "--reset-resource" ]; then
+  reset_resource=1
+  shift
+else
+  reset_resource=0
+fi
+
+mkdir -p "$(dirname -- "$task_file")"
+if [ "$reset_resource" -eq 1 ] || [ ! -f "$task_file" ]; then
+  cp "$repository_dir/tests/fixtures/dev-tasks.md" "$task_file"
+fi
+
+export NVIM_APPNAME=${NVIM_APPNAME:-LazyVim}
+export OBSIDIAN_TASKS_PROFILE=dev
+export OBSIDIAN_TASKS_PLUGIN_DIR=$repository_dir
+export OBSIDIAN_TASKS_TASK_FILE=$task_file
+
+exec nvim "$@"

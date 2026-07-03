@@ -1,4 +1,5 @@
 local parser = require("obsidian-tasks.parser")
+local date = require("obsidian-tasks.date")
 
 local M = {}
 
@@ -74,7 +75,7 @@ function M.toggle(task, completion)
   if line:match("^%s*%- %[ %]") then
     line = line:gsub("^(%s*%- )%[ %]", "%1[x]", 1)
     if not line:find(completion.marker, 1, true) then
-      line = line .. " " .. completion.marker .. " " .. os.date(completion.date_format)
+      line = line .. " " .. completion.marker .. " " .. date.today()
     end
   elseif line:match("^%s*%- %[[xX]%]") then
     line = line:gsub("^(%s*%- )%[[xX]%]", "%1[ ]", 1)
@@ -85,7 +86,11 @@ function M.toggle(task, completion)
   end
 
   lines[lnum] = line
-  return write_lines(task.path, lines)
+  local ok, write_error = write_lines(task.path, lines)
+  if not ok then
+    return nil, write_error
+  end
+  return true, { path = task.path, lnum = lnum }
 end
 
 function M.tags(repository)
