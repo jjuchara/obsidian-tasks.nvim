@@ -244,6 +244,49 @@ assert(
   "later deadlines must be grouped as on-track"
 )
 
+local tabs_first = vim.fn.tempname() .. ".md"
+local tabs_second = vim.fn.tempname() .. ".md"
+vim.fn.writefile({ "- [ ] Personal-only #personal" }, tabs_first)
+vim.fn.writefile({ "- [ ] Frontend-only #frontend" }, tabs_second)
+plugin.setup({
+  repositories = {
+    { name = "personal", alias = "Personal tasks", path = tabs_first },
+    { name = "frontend", alias = "Frontend tasks", path = tabs_second },
+  },
+  view = {
+    type = "window",
+    window_command = "botright new",
+    repository_mode = "tabs",
+    status = "all",
+  },
+})
+local tabpage_count = #vim.api.nvim_list_tabpages()
+local tabs_state = plugin.open()
+assert_equal(#vim.api.nvim_list_tabpages(), tabpage_count, "repository tabs must not create Neovim tabpages")
+assert_equal(tabs_state.active_repository, 1, "the first repository tab must be active initially")
+local tabs_rendered = table.concat(vim.api.nvim_buf_get_lines(tabs_state.buf, 0, -1, false), "\n")
+assert(tabs_rendered:find("Personal-only", 1, true), "the active repository task is missing")
+assert(not tabs_rendered:find("Frontend-only", 1, true), "an inactive repository task must not be rendered")
+local winbar = vim.wo[tabs_state.win].winbar
+assert(winbar:find("Personal tasks", 1, true), "the first repository alias is missing")
+assert(winbar:find("Frontend tasks", 1, true), "the second repository alias is missing")
+assert(not winbar:find("personal", 1, true), "the repository name must not be shown when an alias exists")
+
+local next_repository
+for _, mapping in ipairs(vim.api.nvim_buf_get_keymap(tabs_state.buf, "n")) do
+  if mapping.desc == "Next task repository" then
+    next_repository = mapping.callback
+    break
+  end
+end
+assert(next_repository, "next repository mapping is missing")
+next_repository()
+assert_equal(tabs_state.active_repository, 2, "next repository mapping did not activate the second tab")
+tabs_rendered = table.concat(vim.api.nvim_buf_get_lines(tabs_state.buf, 0, -1, false), "\n")
+assert(tabs_rendered:find("Frontend-only", 1, true), "the selected repository task is missing")
+assert(not tabs_rendered:find("Personal-only", 1, true), "the previous repository task must not be rendered")
+vim.api.nvim_win_close(tabs_state.win, true)
+
 vim.cmd.runtime("plugin/obsidian-tasks.lua")
 assert_equal(vim.fn.exists(":ObsidianTasksSort"), 2, "sort command is missing")
 vim.cmd.ObsidianTasksSort("source")
@@ -251,4 +294,6 @@ assert_equal(state.sort, "source", "sort command did not update open views")
 
 vim.uv.fs_unlink(temp)
 vim.uv.fs_unlink(view_temp)
+vim.uv.fs_unlink(tabs_first)
+vim.uv.fs_unlink(tabs_second)
 print("obsidian-tasks tests: OK")

@@ -6,6 +6,8 @@ local M = {}
 local namespace = vim.api.nvim_create_namespace("obsidian-tasks")
 local states = {}
 
+local function repository_label(repo) return repo.alias or repo.name end
+
 local function notify(message, level)
   vim.notify("obsidian-tasks: " .. message, level or vim.log.levels.INFO)
 end
@@ -130,7 +132,8 @@ end
 local function collect(state)
   local output, line_map, highlights = {}, {}, {}
   local today = date.today()
-  for repo_index, repo in ipairs(state.repositories) do
+  local repositories = state.active_repository and { state.repositories[state.active_repository] } or state.repositories
+  for repo_index, repo in ipairs(repositories) do
     local tasks, error_message = repository.load(repo)
     if not tasks then
       add_line(output, line_map, highlights, "Error: " .. error_message, "DiagnosticError")
@@ -150,7 +153,7 @@ local function collect(state)
         if repo_index > 1 then
           add_line(output, line_map, highlights, "")
         end
-        add_line(output, line_map, highlights, "󰉋 " .. repo.name, "ObsidianTasksRepository")
+        add_line(output, line_map, highlights, "󰉋 " .. repository_label(repo), "ObsidianTasksRepository")
       end
 
       if #filtered == 0 then
@@ -169,6 +172,20 @@ local function collect(state)
     end
   end
   return output, line_map, highlights
+end
+
+local function update_repository_tabs(state)
+  if not state.active_repository or not vim.api.nvim_win_is_valid(state.win) then
+    return
+  end
+  local tabs = {}
+  for index, repo in ipairs(state.repositories) do
+    local highlight = index == state.active_repository and "ObsidianTasksTabActive" or "ObsidianTasksTab"
+    local name = repository_label(repo):gsub("%%", "%%%%")
+    tabs[#tabs + 1] = ("%%#%s#%%%d@v:lua.ObsidianTasksSelectRepository@ %s %%T"):format(highlight, index, name)
+  end
+  tabs[#tabs + 1] = "%#WinBar#"
+  vim.wo[state.win].winbar = table.concat(tabs, " ")
 end
 
 local function find_task_line(line_map, target)
@@ -210,6 +227,7 @@ function M.refresh(state)
   for _, item in ipairs(highlights) do
     vim.api.nvim_buf_add_highlight(state.buf, namespace, item[2], item[1], 0, -1)
   end
+  update_repository_tabs(state)
   state.line_map = line_map
   if #output > 0 then
     local task_line = find_task_line(line_map, cursor_task)
@@ -235,10 +253,7 @@ local function current_task(state)
 end
 
 local function close(state)
-  if state.tab_owned and vim.api.nvim_tabpage_is_valid(state.tab) and #vim.api.nvim_list_tabpages() > 1 then
-    vim.api.nvim_set_current_tabpage(state.tab)
-    vim.cmd.tabclose()
-  elseif vim.api.nvim_win_is_valid(state.win) then
+  if vim.api.nvim_win_is_valid(state.win) then
     vim.api.nvim_win_close(state.win, true)
   end
   if vim.api.nvim_buf_is_valid(state.buf) then
@@ -277,6 +292,29 @@ end
 
 local statuses = { active = "done", done = "all", all = "active" }
 
+local function select_repository(state, index)
+  if not state.active_repository or index < 1 or index > #state.repositories then
+    return
+  end
+  state.active_repository = index
+  M.refresh(state)
+end
+
+local function cycle_repository(state, offset)
+  local count = #state.repositories
+  select_repository(state, ((state.active_repository - 1 + offset) % count) + 1)
+end
+
+_G.ObsidianTasksSelectRepository = function(index)
+  local win = vim.api.nvim_get_current_win()
+  for _, state in pairs(states) do
+    if state.win == win then
+      select_repository(state, index)
+      return
+    end
+  end
+end
+
 local function map(state, lhs, callback, description)
   if type(lhs) == "table" then
     for _, key in ipairs(lhs) do
@@ -312,6 +350,8 @@ local function configure_buffer(state)
     M.refresh(state)
     notify("sort: " .. state.sort)
   end, "Cycle task sorting")
+  map(state, mappings.next_repository, function() cycle_repository(state, 1) end, "Next task repository")
+  map(state, mappings.previous_repository, function() cycle_repository(state, -1) end, "Previous task repository")
 
   vim.api.nvim_create_autocmd("BufWipeout", {
     buffer = buf,
@@ -365,9 +405,8 @@ local function create_state(config, repositories, options)
   local state = {
     buf = buf,
     win = win,
-    tab = vim.api.nvim_get_current_tabpage(),
-    tab_owned = options.tab_owned,
     repositories = repositories,
+    active_repository = options.active_repository,
     show_repository_headers = options.show_repository_headers,
     status = config.view.status,
     sort = config.view.sort,
@@ -384,13 +423,7 @@ function M.open(config)
   if config.view.repository_mode == "sections" then
     return create_state(config, config.repositories, { show_repository_headers = #config.repositories > 1 })
   end
-
-  local opened = {}
-  for _, repo in ipairs(config.repositories) do
-    vim.cmd.tabnew()
-    opened[#opened + 1] = create_state(config, { repo }, { tab_owned = true, show_repository_headers = false })
-  end
-  return opened
+  return create_state(config, config.repositories, { active_repository = 1, show_repository_headers = false })
 end
 
 return M

@@ -24,6 +24,8 @@ end, {
 })
 
 vim.api.nvim_set_hl(0, "ObsidianTasksRepository", { link = "Title", default = true })
+vim.api.nvim_set_hl(0, "ObsidianTasksTab", { link = "TabLine", default = true })
+vim.api.nvim_set_hl(0, "ObsidianTasksTabActive", { link = "TabLineSel", default = true })
 vim.api.nvim_set_hl(0, "ObsidianTasksTag", { link = "Identifier", default = true })
 vim.api.nvim_set_hl(0, "ObsidianTasksTask", { link = "Normal", default = true })
 vim.api.nvim_set_hl(0, "ObsidianTasksDone", { link = "Comment", default = true })

@@ -34,6 +34,8 @@ M.defaults = {
     close = { "q", "<Esc>" },
     cycle_status = "s",
     cycle_sort = "o",
+    next_repository = "<Tab>",
+    previous_repository = "<S-Tab>",
   },
 }
 
@@ -87,6 +89,9 @@ function M.setup(options)
   local names = {}
   for index, repository in ipairs(config.repositories) do
     local repo = normalize_repository(repository, index)
+    if repo.alias ~= nil and (type(repo.alias) ~= "string" or repo.alias == "") then
+      fail(("repository %q alias must be a non-empty string"):format(repo.name))
+    end
     if names[repo.name] then
       fail(("repository name %q is duplicated"):format(repo.name))
     end

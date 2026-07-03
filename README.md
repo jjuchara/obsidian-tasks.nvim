@@ -29,7 +29,7 @@ Keep notes in Obsidian and stay in Neovim when it is time to execute. The plugin
 
 | | Capability |
 |---|---|
-| 🗂️ | Combine multiple vaults in one view or open each repository in its own tabpage |
+| 🗂️ | Combine multiple vaults in one view or switch repositories with tabs inside the task view |
 | 🌳 | Group tasks recursively by tag order: `#work #frontend #urgent` |
 | ⚡ | Complete tasks with `<Space>` and append `✅ YYYY-MM-DD` automatically |
 | ✍️ | Create tasks through a guided repository, tag, start date, and deadline flow |
@@ -48,6 +48,7 @@ Keep notes in Obsidian and stay in Neovim when it is time to execute. The plugin
     repositories = {
       {
         name = "personal",
+        alias = "Personal tasks",
         path = "~/notes/personal/Tasks.md",
       },
     },
@@ -70,13 +71,14 @@ Then call `setup()` from your configuration.
 
 ## Configuration
 
-The only required option is `repositories`. A repository accepts either a direct `path` to a task file or a `vault` plus a relative `todo_file`.
+The only required option is `repositories`. A repository accepts either a direct `path` to a task file or a `vault` plus a relative `todo_file`. Its optional `alias` is used as the display label while `name` remains the repository identifier.
 
 ```lua
 require("obsidian-tasks").setup({
   repositories = {
     {
       name = "personal",
+      alias = "Personal tasks",        -- optional display label
       path = "~/notes/personal/Tasks.md",
     },
     {
@@ -122,6 +124,8 @@ require("obsidian-tasks").setup({
     close = { "q", "<Esc>" },
     cycle_status = "s",
     cycle_sort = "o",
+    next_repository = "<Tab>",
+    previous_repository = "<S-Tab>",
   },
 })
 ```
@@ -184,7 +188,7 @@ When a task has no inline tag, the nearest `## #tag` heading is used as a fallba
 
 ## Multiple repositories
 
-`repository_mode = "sections"` renders all repositories in one buffer with repository headers. `repository_mode = "tabs"` opens one Neovim tabpage per repository.
+`repository_mode = "sections"` renders all repositories in one buffer with repository headers. `repository_mode = "tabs"` shows repository tabs inside the task view and renders tasks from the active repository. Use `<Tab>` / `<S-Tab>` or click a tab to switch repositories.
 
 ## Development
 

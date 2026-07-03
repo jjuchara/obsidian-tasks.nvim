@@ -28,6 +28,7 @@ Call setup() with at least one repository: >lua
     repositories = {
       {
         name = "personal",
+        alias = "Personal tasks",
         path = "~/notes/personal/Tasks.md",
       },
       {
@@ -43,6 +44,8 @@ Call setup() with at least one repository: >lua
   })
 <
 A repository supports either a direct `path` or `vault` plus `todo_file`.
+The optional `alias` is used in tabs, section headers, selection prompts, and
+notifications while `name` remains the repository identifier.
 
 =============================================================================
 COMMANDS                                                *obsidian-tasks-commands*
@@ -69,6 +72,8 @@ Default mappings inside a task view:
   <CR>       Edit the source Markdown at the task line.
   s          Cycle active, done, and all statuses.
   o          Cycle source, deadline, and title sorting.
+  <Tab>      Show the next repository tab.
+  <S-Tab>    Show the previous repository tab.
   r          Refresh from disk.
   q          Close the view.
   <Esc>      Close the view.
@@ -130,11 +135,15 @@ The complete defaults are: >lua
       close = { "q", "<Esc>" },
       cycle_status = "s",
       cycle_sort = "o",
+      next_repository = "<Tab>",
+      previous_repository = "<S-Tab>",
     },
   }
 <
 `repository_mode = "sections"` renders repositories in one buffer.
-`repository_mode = "tabs"` creates one tabpage per repository.
+`repository_mode = "tabs"` shows repository tabs inside the task view and
+renders tasks from the active repository. Use <Tab>, <S-Tab>, or the mouse
+to switch repositories.
 
 Creation prompts accept YYYY-MM-DD, dates matching `dates.display_format`,
 `yesterday`, `today`, and `tomorrow`. Dates are always stored as ISO values.

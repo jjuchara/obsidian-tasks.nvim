@@ -4,6 +4,18 @@ All notable changes to this project will be documented here.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-07-03
+
+### Added
+
+- Optional repository aliases for user-facing labels.
+- Keyboard and mouse navigation between repository tabs.
+
+### Changed
+
+- Repository tab mode now renders inside a single task view instead of creating Neovim tabpages.
+- Each repository tab displays only tasks from its selected repository.
+
 ## [0.2.0] - 2026-07-03
 
 ### Added
@@ -35,6 +47,7 @@ All notable changes to this project will be documented here.
 - Atomic writes and stale-line protection.
 - English, Russian, and `:help` documentation.
 
-[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/jjuchara/obsidian-tasks.nvim/releases/tag/v0.1.0

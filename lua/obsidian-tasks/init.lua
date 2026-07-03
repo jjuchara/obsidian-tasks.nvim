@@ -7,6 +7,8 @@ local ui = require("obsidian-tasks.ui")
 local M = {}
 local config
 
+local function repository_label(repo) return repo.alias or repo.name end
+
 local function notify(message, level)
   vim.notify("obsidian-tasks: " .. message, level or vim.log.levels.INFO)
 end
@@ -24,7 +26,7 @@ local function select_repository(callback)
   end
   vim.ui.select(config.repositories, {
     prompt = "Repository:",
-    format_item = function(repo) return repo.name end,
+    format_item = repository_label,
   }, callback)
 end
 
@@ -131,7 +133,7 @@ local function create_in(repo)
                 notify(error_message, vim.log.levels.ERROR)
                 return
               end
-              notify("task added to " .. repo.name .. ": " .. table.concat(tags, " → "))
+              notify("task added to " .. repository_label(repo) .. ": " .. table.concat(tags, " → "))
               ui.refresh_all()
             end)
           end)
