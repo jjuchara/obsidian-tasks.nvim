@@ -48,7 +48,8 @@ local function select_primary_tag(repo, callback)
     end
     vim.ui.input({ prompt = "New tag (without #): " }, function(input)
       if input and input ~= "" then
-        callback(input:sub(1, 1) == "#" and input or ("#" .. input))
+        local tag = input:sub(1, 1) == "#" and input or ("#" .. input)
+        vim.schedule(function() callback(tag) end)
       end
     end)
   end)

@@ -34,20 +34,19 @@ The development launcher loads this working tree in the existing `LazyVim` app p
 
 The resource persists at `~/.local/state/obsidian-tasks.nvim-dev/Tasks.md`. Restore it from `tests/fixtures/dev-tasks.md` with `./scripts/nvim-dev --reset-resource`. To use another disposable file, set `OBSIDIAN_TASKS_TASK_FILE=/path/to/Tasks.md`.
 
-The LazyVim plugin spec must select its directory and repository from the launcher environment:
+Keep the LazyVim plugin spec production-only:
 
 ```lua
-local dev = vim.env.OBSIDIAN_TASKS_PROFILE == "dev"
-
 {
   "jjuchara/obsidian-tasks.nvim",
-  dir = dev and vim.env.OBSIDIAN_TASKS_PLUGIN_DIR or nil,
   opts = {
-    repositories = dev and {
-      { name = "dev", path = vim.env.OBSIDIAN_TASKS_TASK_FILE },
-    } or production_repositories,
+    repositories = production_repositories,
   },
 }
 ```
 
-A normal LazyVim launch continues to use the Git checkout and production repositories. Never point the development profile at a production vault when testing write operations.
+The launcher starts Neovim in the repository root. Lazy.nvim then loads the project-local `.lazy.lua`, which replaces the
+plugin directory and repositories for that process. This relies on lazy.nvim's `local_spec` option, which is enabled by
+default. On first launch, inspect `.lazy.lua` when prompted and run `:trust`; Neovim stores trust for the current file
+contents. A normal launch outside the development profile continues to use the installed plugin and production
+repositories. Never point the development profile at a production vault when testing write operations.

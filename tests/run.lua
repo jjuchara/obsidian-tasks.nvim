@@ -153,6 +153,46 @@ assert_equal(
   "date prompt examples must use the configured display format"
 )
 
+local new_tag_temp = vim.fn.tempname() .. ".md"
+vim.fn.writefile({ "## #existing", "- [ ] Existing task #existing" }, new_tag_temp)
+plugin.setup({
+  repositories = {
+    repo,
+    { name = "new-tag-test", path = new_tag_temp },
+  },
+})
+local new_tag_input_active = false
+vim.ui.select = function(items, options, callback)
+  callback(options.prompt == "Repository:" and items[2] or items[#items])
+end
+vim.ui.input = function(options, callback)
+  if options.prompt == "Task: " then
+    callback("Created with a new primary tag")
+  elseif options.prompt == "New tag (without #): " then
+    new_tag_input_active = true
+    callback("new-primary")
+    new_tag_input_active = false
+  else
+    assert(not new_tag_input_active, "the next prompt must wait until the new-tag input closes")
+    callback("")
+  end
+end
+plugin.create()
+local new_tag_created = vim.wait(1000, function()
+  return vim.iter(assert(repository.load({ name = "new-tag-test", path = new_tag_temp }))):any(function(task)
+    return task.text:find("Created with a new primary tag", 1, true) ~= nil
+  end)
+end)
+vim.ui.input, vim.ui.select = original_input, original_select
+assert(new_tag_created, "task creation must continue after entering a new primary tag")
+local original_repo_tasks = assert(repository.load(repo))
+assert(
+  not vim.iter(original_repo_tasks):any(function(task)
+    return task.text:find("Created with a new primary tag", 1, true) ~= nil
+  end),
+  "task with a new primary tag must be written only to the selected repository"
+)
+
 local view_temp = vim.fn.tempname() .. ".md"
 local view_repo = { name = "view-test", path = view_temp }
 local today = date.today()
@@ -293,6 +333,7 @@ vim.cmd.ObsidianTasksSort("source")
 assert_equal(state.sort, "source", "sort command did not update open views")
 
 vim.uv.fs_unlink(temp)
+vim.uv.fs_unlink(new_tag_temp)
 vim.uv.fs_unlink(view_temp)
 vim.uv.fs_unlink(tabs_first)
 vim.uv.fs_unlink(tabs_second)

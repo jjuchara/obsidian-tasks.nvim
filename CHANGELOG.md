@@ -4,6 +4,17 @@ All notable changes to this project will be documented here.
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-07-03
+
+### Changed
+
+- Moved LazyVim development overrides into a project-local spec so user configuration remains production-only.
+- Kept development task writes isolated from production repositories.
+
+### Fixed
+
+- Task creation now continues after entering a new primary tag with asynchronous UI providers.
+
 ## [0.2.1] - 2026-07-03
 
 ### Added
@@ -47,7 +58,8 @@ All notable changes to this project will be documented here.
 - Atomic writes and stale-line protection.
 - English, Russian, and `:help` documentation.
 
-[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/jjuchara/obsidian-tasks.nvim/releases/tag/v0.1.0

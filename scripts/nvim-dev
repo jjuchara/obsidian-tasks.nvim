@@ -23,4 +23,5 @@ export OBSIDIAN_TASKS_PROFILE=dev
 export OBSIDIAN_TASKS_PLUGIN_DIR=$repository_dir
 export OBSIDIAN_TASKS_TASK_FILE=$task_file
 
+cd "$repository_dir"
 exec nvim "$@"
