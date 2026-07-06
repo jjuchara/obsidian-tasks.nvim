@@ -5,6 +5,7 @@ local repository = require("obsidian-tasks.repository")
 local M = {}
 local namespace = vim.api.nvim_create_namespace("obsidian-tasks")
 local states = {}
+local filter_picker_active = false
 
 local function repository_label(repo) return repo.alias or repo.name end
 
@@ -18,6 +19,10 @@ end
 
 local function matches_status(task, status)
   return status == "all" or (status == "done" and task.done) or (status == "active" and not task.done)
+end
+
+local function matches_filter(task, tag_filter)
+  return not tag_filter or vim.tbl_contains(task.tags, tag_filter)
 end
 
 local function add_line(output, line_map, highlights, text, highlight, task)
@@ -132,6 +137,10 @@ end
 local function collect(state)
   local output, line_map, highlights = {}, {}, {}
   local today = date.today()
+  if state.tag_filter then
+    add_line(output, line_map, highlights, "Filter: " .. state.tag_filter, "ObsidianTasksFilter")
+    add_line(output, line_map, highlights, "")
+  end
   local repositories = state.active_repository and { state.repositories[state.active_repository] } or state.repositories
   for repo_index, repo in ipairs(repositories) do
     local tasks, error_message = repository.load(repo)
@@ -140,7 +149,7 @@ local function collect(state)
     else
       local filtered = {}
       for _, task in ipairs(tasks) do
-        if matches_status(task, state.status) then
+        if matches_status(task, state.status) and matches_filter(task, state.tag_filter) then
           filtered[#filtered + 1] = task
         end
       end
@@ -248,6 +257,39 @@ function M.set_sort_all(mode)
   end
 end
 
+function M.set_filter_all(tag_filter)
+  for _, state in pairs(states) do
+    state.tag_filter = tag_filter
+    M.refresh(state)
+  end
+end
+
+function M.select_filter(repositories, callback)
+  local items = { { label = "Clear filter", tag = false } }
+  local seen = {}
+  for _, repo in ipairs(repositories) do
+    local tags, error_message = repository.tags(repo)
+    if not tags then
+      notify(error_message, vim.log.levels.ERROR)
+    else
+      for _, tag in ipairs(tags) do
+        if not seen[tag] then
+          items[#items + 1] = { label = tag, tag = tag }
+          seen[tag] = true
+        end
+      end
+    end
+  end
+  filter_picker_active = true
+  vim.ui.select(items, {
+    prompt = "Filter by tag:",
+    format_item = function(item) return item.label end,
+  }, function(choice)
+    filter_picker_active = false
+    callback(choice and (choice.tag or nil) or nil, choice ~= nil)
+  end)
+end
+
 local function current_task(state)
   return state.line_map[vim.api.nvim_win_get_cursor(state.win)[1]]
 end
@@ -350,6 +392,20 @@ local function configure_buffer(state)
     M.refresh(state)
     notify("sort: " .. state.sort)
   end, "Cycle task sorting")
+  map(state, mappings.filter, function()
+    local repositories = state.repositories
+    if state.active_repository then
+      repositories = { state.repositories[state.active_repository] }
+    end
+    M.select_filter(repositories, function(tag_filter, confirmed)
+      if not confirmed or not is_valid(state) then
+        return
+      end
+      state.config.view.filter = tag_filter
+      M.set_filter_all(tag_filter)
+      notify(tag_filter and ("filter: " .. tag_filter) or "filter cleared")
+    end)
+  end, "Filter tasks by tag")
   map(state, mappings.next_repository, function() cycle_repository(state, 1) end, "Next task repository")
   map(state, mappings.previous_repository, function() cycle_repository(state, -1) end, "Previous task repository")
 
@@ -363,6 +419,9 @@ local function configure_buffer(state)
     vim.api.nvim_create_autocmd("WinLeave", {
       buffer = buf,
       callback = function()
+        if filter_picker_active then
+          return
+        end
         vim.schedule(function()
           if states[buf] and is_valid(state) and vim.api.nvim_get_current_win() ~= state.win then
             close(state)
@@ -410,6 +469,7 @@ local function create_state(config, repositories, options)
     show_repository_headers = options.show_repository_headers,
     status = config.view.status,
     sort = config.view.sort,
+    tag_filter = config.view.filter,
     config = config,
     line_map = {},
   }

@@ -4,6 +4,17 @@ All notable changes to this project will be documented here.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-06
+
+### Added
+
+- Task views can now filter by any task tag through `:ObsidianTasksFilter` or the `f` mapping, with the active filter preserved across refreshes.
+- `scripts/nvim-dev --fixture` now reloads the development task resource with sample tasks for manual testing.
+
+### Fixed
+
+- Opening the tag filter picker from a floating task view no longer triggers `close_on_leave`; selecting a tag now returns to the filtered view.
+
 ## [0.3.0] - 2026-07-06
 
 ### Added
@@ -72,7 +83,9 @@ All notable changes to this project will be documented here.
 - Atomic writes and stale-line protection.
 - English, Russian, and `:help` documentation.
 
-[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.1.0...v0.2.0

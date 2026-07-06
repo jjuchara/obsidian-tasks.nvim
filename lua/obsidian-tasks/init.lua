@@ -278,4 +278,31 @@ function M.sort(mode)
   notify("sort: " .. selected)
 end
 
+function M.filter(tag)
+  ensure_setup()
+  local function apply(selected)
+    config.view.filter = selected
+    ui.set_filter_all(selected)
+    notify(selected and ("filter: " .. selected) or "filter cleared")
+  end
+
+  if tag == nil then
+    ui.select_filter(config.repositories, function(selected, confirmed)
+      if confirmed then
+        apply(selected)
+      end
+    end)
+    return
+  end
+  if tag == "clear" then
+    apply(nil)
+    return
+  end
+  local tags = parser.parse_tag_input(tag)
+  if #tags ~= 1 then
+    error("obsidian-tasks: filter must be one tag or 'clear'", 2)
+  end
+  apply(tags[1])
+end
+
 return M

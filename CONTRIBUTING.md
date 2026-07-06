@@ -33,8 +33,9 @@ The development launcher loads this working tree in the existing `LazyVim` app p
 ```
 
 The resource persists at `~/.local/state/obsidian-tasks.nvim-dev/Tasks.md`. Start with an empty task list by running
-`./scripts/nvim-dev --reset`. The previous `--reset-resource` flag remains available as an alias. To use another
-disposable file, set `OBSIDIAN_TASKS_TASK_FILE=/path/to/Tasks.md`.
+`./scripts/nvim-dev --reset`, or load the repository's sample tasks with `./scripts/nvim-dev --fixture`. The previous
+`--reset-resource` flag remains available as an alias for `--reset`. To use another disposable file, set
+`OBSIDIAN_TASKS_TASK_FILE=/path/to/Tasks.md`.
 
 Keep the LazyVim plugin spec production-only:
 

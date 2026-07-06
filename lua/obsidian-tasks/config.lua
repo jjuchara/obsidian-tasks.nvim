@@ -13,6 +13,7 @@ M.defaults = {
     window_command = "botright new",
     status = "active",
     sort = "source",
+    filter = nil,
   },
   dates = {
     display_format = "%d.%m.%Y",
@@ -34,6 +35,7 @@ M.defaults = {
     close = { "q", "<Esc>" },
     cycle_status = "s",
     cycle_sort = "o",
+    filter = "f",
     next_repository = "<Tab>",
     previous_repository = "<S-Tab>",
   },
@@ -77,6 +79,11 @@ function M.setup(options)
   end
   if not vim.tbl_contains({ "source", "deadline", "title" }, config.view.sort) then
     fail("view.sort must be 'source', 'deadline', or 'title'")
+  end
+  if config.view.filter ~= nil
+    and (type(config.view.filter) ~= "string" or not config.view.filter:match("^#[^%s#]+$"))
+  then
+    fail("view.filter must be a tag starting with '#'")
   end
   if type(config.dates.display_format) ~= "string" or config.dates.display_format == "" then
     fail("dates.display_format must be a non-empty string")

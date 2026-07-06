@@ -1,5 +1,6 @@
 :ObsidianTasks	obsidian-tasks.txt	/*:ObsidianTasks*
 :ObsidianTasksCreate	obsidian-tasks.txt	/*:ObsidianTasksCreate*
+:ObsidianTasksFilter	obsidian-tasks.txt	/*:ObsidianTasksFilter*
 :ObsidianTasksRefresh	obsidian-tasks.txt	/*:ObsidianTasksRefresh*
 :ObsidianTasksSort	obsidian-tasks.txt	/*:ObsidianTasksSort*
 obsidian-tasks-commands	obsidian-tasks.txt	/*obsidian-tasks-commands*

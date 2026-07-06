@@ -328,6 +328,30 @@ assert(
   "later deadlines must be grouped as on-track"
 )
 
+local original_filter_select = vim.ui.select
+vim.ui.select = function(items, options, callback)
+  assert_equal(options.prompt, "Filter by tag:", "filter picker prompt is incorrect")
+  local selected = vim.iter(items):find(function(item) return item.tag == "#work" end)
+  callback(selected)
+end
+plugin.filter()
+vim.ui.select = original_filter_select
+assert_equal(state.tag_filter, "#work", "selected tag filter was not applied")
+assert_equal(
+  task_order(state),
+  { "Alpha", "Today", "Zulu", "Later", "Done", "No" },
+  "tag filter removed matching tasks"
+)
+local filtered_view = table.concat(vim.api.nvim_buf_get_lines(state.buf, 0, -1, false), "\n")
+assert(filtered_view:find("Filter: #work", 1, true), "active filter indicator is missing")
+plugin.refresh()
+assert_equal(state.tag_filter, "#work", "refresh did not preserve the active filter")
+plugin.filter("personal")
+assert_equal(task_order(state), {}, "tag filter kept tasks without the selected tag")
+plugin.filter("clear")
+assert_equal(state.tag_filter, nil, "clear did not remove the active filter")
+assert_equal(task_order(state), { "Alpha", "Today", "Zulu", "Later", "Done", "No" }, "clear did not restore tasks")
+
 local tabs_first = vim.fn.tempname() .. ".md"
 local tabs_second = vim.fn.tempname() .. ".md"
 vim.fn.writefile({ "- [ ] Personal-only #personal" }, tabs_first)
@@ -371,8 +395,37 @@ assert(tabs_rendered:find("Frontend-only", 1, true), "the selected repository ta
 assert(not tabs_rendered:find("Personal-only", 1, true), "the previous repository task must not be rendered")
 vim.api.nvim_win_close(tabs_state.win, true)
 
+plugin.setup({
+  repositories = { view_repo },
+  view = { type = "float", close_on_leave = true, status = "all" },
+})
+local float_state = plugin.open()
+local original_float_select = vim.ui.select
+vim.ui.select = function(items, _, callback)
+  local picker_buf = vim.api.nvim_create_buf(false, true)
+  local picker_win = vim.api.nvim_open_win(picker_buf, true, {
+    relative = "editor",
+    row = 1,
+    col = 1,
+    width = 30,
+    height = 5,
+    style = "minimal",
+  })
+  local selected = vim.iter(items):find(function(item) return item.tag == "#work" end)
+  callback(selected)
+  vim.api.nvim_win_close(picker_win, true)
+end
+plugin.filter()
+vim.ui.select = original_float_select
+assert(vim.api.nvim_buf_is_valid(float_state.buf), "filter picker closed the floating task buffer")
+assert(vim.api.nvim_win_is_valid(float_state.win), "filter picker closed the floating task window")
+assert_equal(float_state.tag_filter, "#work", "floating task view did not apply the selected filter")
+assert_equal(vim.api.nvim_get_current_win(), float_state.win, "filter picker did not return to the task view")
+vim.api.nvim_win_close(float_state.win, true)
+
 vim.cmd.runtime("plugin/obsidian-tasks.lua")
 assert_equal(vim.fn.exists(":ObsidianTasksSort"), 2, "sort command is missing")
+assert_equal(vim.fn.exists(":ObsidianTasksFilter"), 2, "filter command is missing")
 vim.cmd.ObsidianTasksSort("source")
 assert_equal(state.sort, "source", "sort command did not update open views")
 

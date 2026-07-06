@@ -6,17 +6,24 @@ repository_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 state_home=${XDG_STATE_HOME:-"$HOME/.local/state"}
 task_file=${OBSIDIAN_TASKS_TASK_FILE:-"$state_home/obsidian-tasks.nvim-dev/Tasks.md"}
 
-if [ "${1:-}" = "--reset" ] || [ "${1:-}" = "--reset-resource" ]; then
-  reset_resource=1
-  shift
-else
-  reset_resource=0
-fi
+case "${1:-}" in
+  --reset|--reset-resource)
+    resource_mode=empty
+    shift
+    ;;
+  --fixture)
+    resource_mode=fixture
+    shift
+    ;;
+  *)
+    resource_mode=keep
+    ;;
+esac
 
 mkdir -p "$(dirname -- "$task_file")"
-if [ "$reset_resource" -eq 1 ]; then
+if [ "$resource_mode" = "empty" ]; then
   printf '%s\n' '# Development tasks' >"$task_file"
-elif [ ! -f "$task_file" ]; then
+elif [ "$resource_mode" = "fixture" ] || [ ! -f "$task_file" ]; then
   cp "$repository_dir/tests/fixtures/dev-tasks.md" "$task_file"
 fi
 

@@ -99,6 +99,7 @@ require("obsidian-tasks").setup({
     window_command = "botright new",
     status = "active",             -- "active", "done", or "all"
     sort = "source",               -- "source", "deadline", or "title"
+    filter = nil,                   -- optional initial tag filter, e.g. "#work"
   },
 
   dates = {
@@ -124,6 +125,7 @@ require("obsidian-tasks").setup({
     close = { "q", "<Esc>" },
     cycle_status = "s",
     cycle_sort = "o",
+    filter = "f",
     next_repository = "<Tab>",
     previous_repository = "<S-Tab>",
   },
@@ -140,6 +142,7 @@ require("obsidian-tasks").setup({
 | `:ObsidianTasksCreate` | Start the guided creation flow |
 | `:ObsidianTasksRefresh` | Reload every open task view |
 | `:ObsidianTasksSort [source\|deadline\|title]` | Set sorting, or cycle it without an argument |
+| `:ObsidianTasksFilter [#tag\|clear]` | Select or set a tag filter, or clear it |
 
 ### Task view
 
@@ -149,10 +152,12 @@ require("obsidian-tasks").setup({
 | `<CR>` | Open the Markdown source at the task line |
 | `s` | Cycle `active → done → all` |
 | `o` | Cycle `source → deadline → title` sorting |
+| `f` | Select a tag filter or clear the active filter |
 | `r` | Refresh from disk |
 | `q`, `<Esc>` | Close the view |
 
 A floating view is modal by default: clicking another window closes it. Set `view.close_on_leave = false` if you prefer a persistent float.
+Tag filtering matches any tag on a task, remains active after refresh, and applies to every open task view.
 
 ### Creating a task
 

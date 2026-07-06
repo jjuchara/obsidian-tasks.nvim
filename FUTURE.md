@@ -14,8 +14,8 @@ This document tracks ideas that are intentionally outside the current core relea
 
 - Collapse tag groups with native folds.
 - Extend sorting with creation date and repository modes.
-- Filter by tag, repository, and date range.
-- Preserve the active filter and expanded groups after refresh.
+- Extend tag filtering with repository and date-range criteria.
+- Preserve expanded groups after refresh.
 - Preview the surrounding Markdown source.
 - Explore optional Snacks picker and Telescope integrations.
 

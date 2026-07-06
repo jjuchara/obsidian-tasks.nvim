@@ -23,10 +23,19 @@ end, {
   complete = function() return { "source", "deadline", "title" } end,
 })
 
+vim.api.nvim_create_user_command("ObsidianTasksFilter", function(options)
+  require("obsidian-tasks").filter(options.args ~= "" and options.args or nil)
+end, {
+  desc = "Filter Obsidian tasks by tag",
+  nargs = "?",
+  complete = function() return { "clear" } end,
+})
+
 vim.api.nvim_set_hl(0, "ObsidianTasksRepository", { link = "Title", default = true })
 vim.api.nvim_set_hl(0, "ObsidianTasksTab", { link = "TabLine", default = true })
 vim.api.nvim_set_hl(0, "ObsidianTasksTabActive", { link = "TabLineSel", default = true })
 vim.api.nvim_set_hl(0, "ObsidianTasksTag", { link = "Identifier", default = true })
+vim.api.nvim_set_hl(0, "ObsidianTasksFilter", { link = "Special", default = true })
 vim.api.nvim_set_hl(0, "ObsidianTasksTask", { link = "Normal", default = true })
 vim.api.nvim_set_hl(0, "ObsidianTasksDone", { link = "Comment", default = true })
 vim.api.nvim_set_hl(0, "ObsidianTasksOverdue", { link = "DiagnosticError", default = true })
