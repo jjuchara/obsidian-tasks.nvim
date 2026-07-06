@@ -126,19 +126,22 @@ vim.ui.select = function(items, options, callback)
     },
   })
   local action = table.remove(additional_actions, 1)
-  local selected_index, selected_item = vim.iter(items):enumerate():find(function(_, candidate)
-    return candidate.kind == action or candidate.tag == action
-  end)
+  local selected_index, selected_item = vim.iter(items):enumerate():find(
+    function(_, candidate) return candidate.kind == action or candidate.tag == action end
+  )
   callback(selected_item, selected_index)
 end
 plugin.create()
 local created_through_ui
-assert(vim.wait(1000, function()
-  created_through_ui = vim.iter(parser.parse_lines(vim.fn.readfile(temp), repo)):find(function(task)
-    return task.text:find("Created through UI", 1, true) ~= nil
-  end)
-  return created_through_ui ~= nil
-end), "task creation with multiple additional tags timed out")
+assert(
+  vim.wait(1000, function()
+    created_through_ui = vim
+      .iter(parser.parse_lines(vim.fn.readfile(temp), repo))
+      :find(function(task) return task.text:find("Created through UI", 1, true) ~= nil end)
+    return created_through_ui ~= nil
+  end),
+  "task creation with multiple additional tags timed out"
+)
 vim.ui.input, vim.ui.select = original_input, original_select
 
 assert(created_through_ui, "task created through UI is missing")
@@ -182,20 +185,16 @@ end
 plugin.create()
 vim.ui.input, vim.ui.select = original_input, original_select
 
-local relative_task = vim.iter(assert(repository.load(repo))):find(function(task)
-  return task.text:find("Flexible dates", 1, true) ~= nil
-end)
+local relative_task = vim
+  .iter(assert(repository.load(repo)))
+  :find(function(task) return task.text:find("Flexible dates", 1, true) ~= nil end)
 assert(relative_task, "task created with relative dates is missing")
 assert_equal(relative_task.start_date, creation_yesterday, "yesterday input must be persisted as ISO")
 assert_equal(relative_task.due_date, creation_tomorrow, "display-formatted input must be persisted as ISO")
-assert_equal(
-  date_prompts,
-  {
-    "Start date [" .. date.format(creation_today, "%d.%m.%Y") .. "]: ",
-    "Due date [e.g. " .. date.format(creation_tomorrow, "%d.%m.%Y") .. "; empty = no deadline]: ",
-  },
-  "date prompt examples must use the configured display format"
-)
+assert_equal(date_prompts, {
+  "Start date [" .. date.format(creation_today, "%d.%m.%Y") .. "]: ",
+  "Due date [e.g. " .. date.format(creation_tomorrow, "%d.%m.%Y") .. "; empty = no deadline]: ",
+}, "date prompt examples must use the configured display format")
 
 local new_tag_temp = vim.fn.tempname() .. ".md"
 vim.fn.writefile({ "## #existing", "- [ ] Existing task #existing" }, new_tag_temp)
@@ -223,17 +222,17 @@ vim.ui.input = function(options, callback)
 end
 plugin.create()
 local new_tag_created = vim.wait(1000, function()
-  return vim.iter(assert(repository.load({ name = "new-tag-test", path = new_tag_temp }))):any(function(task)
-    return task.text:find("Created with a new primary tag", 1, true) ~= nil
-  end)
+  return vim
+    .iter(assert(repository.load({ name = "new-tag-test", path = new_tag_temp })))
+    :any(function(task) return task.text:find("Created with a new primary tag", 1, true) ~= nil end)
 end)
 vim.ui.input, vim.ui.select = original_input, original_select
 assert(new_tag_created, "task creation must continue after entering a new primary tag")
 local original_repo_tasks = assert(repository.load(repo))
 assert(
-  not vim.iter(original_repo_tasks):any(function(task)
-    return task.text:find("Created with a new primary tag", 1, true) ~= nil
-  end),
+  not vim
+    .iter(original_repo_tasks)
+    :any(function(task) return task.text:find("Created with a new primary tag", 1, true) ~= nil end),
   "task with a new primary tag must be written only to the selected repository"
 )
 
@@ -276,9 +275,7 @@ assert_equal(highlight_groups.ObsidianTasksDueSoon, 2, "all due-soon tasks must 
 local status_notifications = {}
 local original_notify = vim.notify
 local cycle_status
-vim.notify = function(message)
-  status_notifications[#status_notifications + 1] = message
-end
+vim.notify = function(message) status_notifications[#status_notifications + 1] = message end
 for _, mapping in ipairs(vim.api.nvim_buf_get_keymap(state.buf, "n")) do
   if mapping.lhs == "s" then
     assert(mapping.callback, "status mapping callback is missing")
@@ -395,6 +392,58 @@ assert(tabs_rendered:find("Frontend-only", 1, true), "the selected repository ta
 assert(not tabs_rendered:find("Personal-only", 1, true), "the previous repository task must not be rendered")
 vim.api.nvim_win_close(tabs_state.win, true)
 
+local folds_temp = vim.fn.tempname() .. ".md"
+vim.fn.writefile({
+  "- [ ] Frontend task #work #frontend",
+  "- [ ] Backend task #work #backend",
+}, folds_temp)
+plugin.setup({
+  repositories = { { name = "folds", path = folds_temp } },
+  view = { type = "window", window_command = "botright new", status = "all" },
+})
+local folds_state = plugin.open()
+assert_equal(vim.wo[folds_state.win].foldmethod, "manual", "task groups must use native manual folds")
+assert_equal(vim.wo[folds_state.win].foldcolumn, "1", "task view must expose the native fold column")
+
+local function fold_line(current_state, suffix)
+  for _, fold in ipairs(current_state.folds) do
+    if fold.key:sub(-#suffix) == suffix then
+      return fold.start
+    end
+  end
+end
+
+local work_fold = assert(fold_line(folds_state, "#work"), "parent tag fold is missing")
+local frontend_fold = assert(fold_line(folds_state, "#frontend"), "nested tag fold is missing")
+vim.api.nvim_win_set_cursor(folds_state.win, { frontend_fold, 0 })
+vim.cmd("normal! zc")
+vim.api.nvim_win_set_cursor(folds_state.win, { work_fold, 0 })
+vim.cmd("normal! zc")
+assert_equal(vim.fn.foldclosed(work_fold), work_fold, "parent tag group did not collapse")
+
+plugin.refresh()
+work_fold = assert(fold_line(folds_state, "#work"), "parent tag fold disappeared after refresh")
+frontend_fold = assert(fold_line(folds_state, "#frontend"), "nested tag fold disappeared after refresh")
+assert_equal(vim.fn.foldclosed(work_fold), work_fold, "refresh did not preserve the collapsed parent group")
+vim.api.nvim_win_set_cursor(folds_state.win, { work_fold, 0 })
+vim.cmd("normal! zo")
+assert_equal(vim.fn.foldclosed(frontend_fold), frontend_fold, "refresh did not preserve the collapsed nested group")
+assert(vim.fn.foldtextresult(frontend_fold):find("▸ #frontend", 1, true), "collapsed fold marker is incorrect")
+vim.api.nvim_win_close(folds_state.win, true)
+
+plugin.setup({
+  repositories = { { name = "folds-collapsed", path = folds_temp } },
+  view = { type = "window", window_command = "botright new", status = "all", fold_level = 0 },
+})
+local collapsed_state = plugin.open()
+local collapsed_work_fold = assert(fold_line(collapsed_state, "#work"), "initially collapsed tag fold is missing")
+assert_equal(
+  vim.fn.foldclosed(collapsed_work_fold),
+  collapsed_work_fold,
+  "fold_level = 0 must initially collapse top-level groups"
+)
+vim.api.nvim_win_close(collapsed_state.win, true)
+
 plugin.setup({
   repositories = { view_repo },
   view = { type = "float", close_on_leave = true, status = "all" },
@@ -434,4 +483,5 @@ vim.uv.fs_unlink(new_tag_temp)
 vim.uv.fs_unlink(view_temp)
 vim.uv.fs_unlink(tabs_first)
 vim.uv.fs_unlink(tabs_second)
+vim.uv.fs_unlink(folds_temp)
 print("obsidian-tasks tests: OK")

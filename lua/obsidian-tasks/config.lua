@@ -14,6 +14,7 @@ M.defaults = {
     status = "active",
     sort = "source",
     filter = nil,
+    fold_level = 99,
   },
   dates = {
     display_format = "%d.%m.%Y",
@@ -41,9 +42,7 @@ M.defaults = {
   },
 }
 
-local function fail(message)
-  error("obsidian-tasks: " .. message, 3)
-end
+local function fail(message) error("obsidian-tasks: " .. message, 3) end
 
 local function normalize_repository(repository, index)
   local repo = vim.deepcopy(repository)
@@ -80,10 +79,14 @@ function M.setup(options)
   if not vim.tbl_contains({ "source", "deadline", "title" }, config.view.sort) then
     fail("view.sort must be 'source', 'deadline', or 'title'")
   end
-  if config.view.filter ~= nil
+  if
+    config.view.filter ~= nil
     and (type(config.view.filter) ~= "string" or not config.view.filter:match("^#[^%s#]+$"))
   then
     fail("view.filter must be a tag starting with '#'")
+  end
+  if type(config.view.fold_level) ~= "number" or config.view.fold_level < 0 or config.view.fold_level % 1 ~= 0 then
+    fail("view.fold_level must be a non-negative integer")
   end
   if type(config.dates.display_format) ~= "string" or config.dates.display_format == "" then
     fail("dates.display_format must be a non-empty string")

@@ -7,23 +7,19 @@ local namespace = vim.api.nvim_create_namespace("obsidian-tasks")
 local states = {}
 local filter_picker_active = false
 
+_G.ObsidianTasksFoldText = function() return vim.fn.getline(vim.v.foldstart):gsub("▾ ", "▸ ", 1) end
+
 local function repository_label(repo) return repo.alias or repo.name end
 
-local function notify(message, level)
-  vim.notify("obsidian-tasks: " .. message, level or vim.log.levels.INFO)
-end
+local function notify(message, level) vim.notify("obsidian-tasks: " .. message, level or vim.log.levels.INFO) end
 
-local function is_valid(state)
-  return vim.api.nvim_buf_is_valid(state.buf) and vim.api.nvim_win_is_valid(state.win)
-end
+local function is_valid(state) return vim.api.nvim_buf_is_valid(state.buf) and vim.api.nvim_win_is_valid(state.win) end
 
 local function matches_status(task, status)
   return status == "all" or (status == "done" and task.done) or (status == "active" and not task.done)
 end
 
-local function matches_filter(task, tag_filter)
-  return not tag_filter or vim.tbl_contains(task.tags, tag_filter)
-end
+local function matches_filter(task, tag_filter) return not tag_filter or vim.tbl_contains(task.tags, tag_filter) end
 
 local function add_line(output, line_map, highlights, text, highlight, task)
   output[#output + 1] = text
@@ -62,11 +58,19 @@ local function task_highlight(task, today)
   return "ObsidianTasksTask"
 end
 
-local function render_node(node, depth, output, line_map, highlights, state, today)
+local function render_node(node, depth, output, line_map, highlights, folds, fold_prefix, tag_path, state, today)
   for _, name in ipairs(node.order) do
     local child = node.children[name]
+    local child_path = vim.list_extend(vim.deepcopy(tag_path), { name })
+    local fold = {
+      start = #output + 1,
+      key = fold_prefix .. "\31" .. table.concat(child_path, "\31"),
+      depth = #child_path,
+    }
+    folds[#folds + 1] = fold
     add_line(output, line_map, highlights, string.rep("  ", depth) .. "▾ " .. name, "ObsidianTasksTag")
-    render_node(child, depth + 1, output, line_map, highlights, state, today)
+    render_node(child, depth + 1, output, line_map, highlights, folds, fold_prefix, child_path, state, today)
+    fold.finish = #output
   end
   for _, task in ipairs(node.tasks) do
     local checkbox = task.done and "[x] " or "[ ] "
@@ -135,7 +139,7 @@ local function add_deadline_tags(tasks, today)
 end
 
 local function collect(state)
-  local output, line_map, highlights = {}, {}, {}
+  local output, line_map, highlights, folds = {}, {}, {}, {}
   local today = date.today()
   if state.tag_filter then
     add_line(output, line_map, highlights, "Filter: " .. state.tag_filter, "ObsidianTasksFilter")
@@ -174,13 +178,51 @@ local function collect(state)
           output,
           line_map,
           highlights,
+          folds,
+          repo.name .. "\31" .. repo.path,
+          {},
           state,
           today
         )
       end
     end
   end
-  return output, line_map, highlights
+  return output, line_map, highlights, folds
+end
+
+local function capture_fold_state(state)
+  if not state.folds then
+    return
+  end
+  vim.api.nvim_win_call(state.win, function()
+    for _, fold in ipairs(state.folds) do
+      local closed = vim.fn.foldclosed(fold.start)
+      state.closed_folds[fold.key] = closed == fold.start or nil
+      if closed == fold.start then
+        vim.cmd(("silent %dfoldopen"):format(fold.start))
+      end
+    end
+  end)
+end
+
+local function apply_folds(state, folds)
+  vim.api.nvim_win_call(state.win, function()
+    vim.cmd("silent! normal! zE")
+    for index = #folds, 1, -1 do
+      local fold = folds[index]
+      if fold.finish > fold.start then
+        vim.cmd(("silent %d,%dfold"):format(fold.start, fold.finish))
+      end
+    end
+    vim.cmd("silent! normal! zR")
+    for index = #folds, 1, -1 do
+      local fold = folds[index]
+      if state.closed_folds[fold.key] then
+        vim.cmd(("silent %dfoldclose"):format(fold.start))
+      end
+    end
+  end)
+  state.folds = folds
 end
 
 local function update_repository_tabs(state)
@@ -228,7 +270,16 @@ function M.refresh(state)
   local cursor = vim.api.nvim_win_get_cursor(state.win)
   local cursor_task = state.cursor_target or state.line_map[cursor[1]]
   state.cursor_target = nil
-  local output, line_map, highlights = collect(state)
+  local output, line_map, highlights, folds = collect(state)
+  capture_fold_state(state)
+  if not state.folds_initialized then
+    for _, fold in ipairs(folds) do
+      if fold.depth > state.config.view.fold_level then
+        state.closed_folds[fold.key] = true
+      end
+    end
+    state.folds_initialized = true
+  end
   vim.bo[state.buf].modifiable = true
   vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, output)
   vim.bo[state.buf].modifiable = false
@@ -236,6 +287,7 @@ function M.refresh(state)
   for _, item in ipairs(highlights) do
     vim.api.nvim_buf_add_highlight(state.buf, namespace, item[2], item[1], 0, -1)
   end
+  apply_folds(state, folds)
   update_repository_tabs(state)
   state.line_map = line_map
   if #output > 0 then
@@ -290,9 +342,7 @@ function M.select_filter(repositories, callback)
   end)
 end
 
-local function current_task(state)
-  return state.line_map[vim.api.nvim_win_get_cursor(state.win)[1]]
-end
+local function current_task(state) return state.line_map[vim.api.nvim_win_get_cursor(state.win)[1]] end
 
 local function close(state)
   if vim.api.nvim_win_is_valid(state.win) then
@@ -375,6 +425,9 @@ local function configure_buffer(state)
   vim.bo[buf].modifiable = false
   vim.bo[buf].filetype = "obsidian-tasks"
   vim.api.nvim_buf_set_name(buf, ("obsidian-tasks://%d"):format(buf))
+  vim.wo[state.win].foldmethod = "manual"
+  vim.wo[state.win].foldcolumn = "1"
+  vim.wo[state.win].foldtext = "v:lua.ObsidianTasksFoldText()"
 
   local mappings = state.config.mappings
   map(state, mappings.toggle, function() toggle(state) end, "Toggle task")
@@ -472,6 +525,9 @@ local function create_state(config, repositories, options)
     tag_filter = config.view.filter,
     config = config,
     line_map = {},
+    closed_folds = {},
+    folds = {},
+    folds_initialized = false,
   }
   states[buf] = state
   configure_buffer(state)

@@ -70,9 +70,7 @@ function M.parse_lines(lines, repository)
   return tasks
 end
 
-function M.extract_tags(text)
-  return extract_tags(text)
-end
+function M.extract_tags(text) return extract_tags(text) end
 
 function M.parse_tag_input(input)
   local tags = {}

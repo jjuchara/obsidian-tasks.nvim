@@ -4,6 +4,17 @@ All notable changes to this project will be documented here.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-06
+
+### Added
+
+- Tag groups now use native Neovim folds with a fold column and configurable initial expansion depth.
+
+### Changed
+
+- Expanded and collapsed tag groups are preserved across refreshes, sorting, filtering, and repository navigation.
+- StyLua formatting is now configured for LuaJIT and enforced in CI.
+
 ## [0.4.0] - 2026-07-06
 
 ### Added
@@ -83,7 +94,8 @@ All notable changes to this project will be documented here.
 - Atomic writes and stale-line protection.
 - English, Russian, and `:help` documentation.
 
-[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.2.1...v0.2.2

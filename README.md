@@ -100,6 +100,7 @@ require("obsidian-tasks").setup({
     status = "active",             -- "active", "done", or "all"
     sort = "source",               -- "source", "deadline", or "title"
     filter = nil,                   -- optional initial tag filter, e.g. "#work"
+    fold_level = 99,                -- initially expand groups through this tag depth
   },
 
   dates = {
@@ -153,11 +154,13 @@ require("obsidian-tasks").setup({
 | `s` | Cycle `active → done → all` |
 | `o` | Cycle `source → deadline → title` sorting |
 | `f` | Select a tag filter or clear the active filter |
+| `za`, `zc`, `zo` | Toggle, close, or open the tag group under the cursor |
 | `r` | Refresh from disk |
 | `q`, `<Esc>` | Close the view |
 
 A floating view is modal by default: clicking another window closes it. Set `view.close_on_leave = false` if you prefer a persistent float.
 Tag filtering matches any tag on a task, remains active after refresh, and applies to every open task view.
+Tag groups use native Neovim folds and expose a fold column for mouse interaction. Their expanded and collapsed states are preserved across refreshes, sorting, filtering, and repository navigation. Set `view.fold_level = 0` to start with top-level groups collapsed, or use a larger depth to reveal initial levels.
 
 ### Creating a task
 

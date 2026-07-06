@@ -80,6 +80,9 @@ Default mappings inside a task view:
   s          Cycle active, done, and all statuses.
   o          Cycle source, deadline, and title sorting.
   f          Select a tag filter or clear the active filter.
+  za         Toggle the tag group under the cursor.
+  zc         Close the tag group under the cursor.
+  zo         Open the tag group under the cursor.
   <Tab>      Show the next repository tab.
   <S-Tab>    Show the previous repository tab.
   r          Refresh from disk.
@@ -90,6 +93,9 @@ Floating views close when focus moves to another window by default. Set
 `view.close_on_leave` to false to keep them open.
 Tag filters match any tag on a task, apply to every open task view, and remain
 active when views are refreshed.
+Tag groups use native Neovim folds and a fold column. Expanded and collapsed
+groups remain in the same state across refreshes, sorting, filtering, and
+repository navigation.
 
 =============================================================================
 MARKDOWN FORMAT                                            *obsidian-tasks-format*
@@ -125,6 +131,7 @@ The complete defaults are: >lua
       status = "active",             -- "active", "done", or "all"
       sort = "source",               -- "source", "deadline", or "title"
       filter = nil,                   -- optional initial tag, e.g. "#work"
+      fold_level = 99,                -- initially expanded tag depth
     },
     dates = {
       display_format = "%d.%m.%Y",  -- strftime format for the task view
@@ -156,6 +163,10 @@ The complete defaults are: >lua
 `repository_mode = "tabs"` shows repository tabs inside the task view and
 renders tasks from the active repository. Use <Tab>, <S-Tab>, or the mouse
 to switch repositories.
+
+`view.fold_level` controls the initially expanded tag depth. Use 0 to start
+with top-level groups collapsed. Standard fold commands and the fold column
+can change individual groups after opening the view.
 
 Creation prompts accept YYYY-MM-DD, dates matching `dates.display_format`,
 `yesterday`, `today`, and `tomorrow`. Dates are always stored as ISO values.

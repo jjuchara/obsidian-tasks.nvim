@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-06T00:00:00+03:00",
+  "title": "Design System: obsidian-tasks.nvim",
+  "extensions": {
+    "colorMeta": {
+      "repository-title": { "role": "primary", "displayName": "Repository Title", "canonical": "Neovim Title", "tonalRamp": [] },
+      "tag-identifier": { "role": "primary", "displayName": "Tag Identifier", "canonical": "Neovim Identifier", "tonalRamp": [] },
+      "task-text": { "role": "neutral", "displayName": "Task Text", "canonical": "Neovim Normal", "tonalRamp": [] },
+      "overdue": { "role": "error", "displayName": "Overdue", "canonical": "Neovim DiagnosticError", "tonalRamp": [] },
+      "due-soon": { "role": "warning", "displayName": "Due Soon", "canonical": "Neovim DiagnosticWarn", "tonalRamp": [] }
+    },
+    "typographyMeta": {
+      "editor": { "displayName": "Editor Typography", "purpose": "Inherit the user's terminal and Neovim font settings." }
+    },
+    "shadows": [],
+    "motion": [],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Task Row",
+      "kind": "custom",
+      "refersTo": "task-view",
+      "description": "A compact checkbox row whose colors are owned by Neovim semantic highlight groups.",
+      "html": "<div class=\"ds-task-row\"><span aria-hidden=\"true\">[ ]</span> Ship release <span class=\"ds-tag\">#work</span></div>",
+      "css": ".ds-task-row { color: CanvasText; background: Canvas; padding: 2px 4px; font: 14px/1.5 ui-monospace, monospace; } .ds-task-row:focus-visible { outline: 1px solid Highlight; outline-offset: 1px; } .ds-tag { font-weight: 600; }"
+    },
+    {
+      "name": "Tag Group",
+      "kind": "nav",
+      "refersTo": "tag-group",
+      "description": "An indented native fold heading with explicit expanded or collapsed state.",
+      "html": "<div class=\"ds-tag-group\"><span aria-hidden=\"true\">▾</span> #work</div>",
+      "css": ".ds-tag-group { color: CanvasText; background: Canvas; padding: 2px 4px; font: 600 14px/1.5 ui-monospace, monospace; } .ds-tag-group:hover { background: color-mix(in srgb, Highlight 12%, Canvas); } .ds-tag-group:focus-visible { outline: 1px solid Highlight; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Native Task Outline",
+    "overview": "The task view is a compact outline that belongs inside Neovim rather than imitating a standalone task application. Hierarchy, checkboxes, repository labels, and concise status text carry the interface. The user's colorscheme and terminal font remain authoritative. The system rejects decorative cards, fixed application palettes, mouse-only controls, and custom interaction models that compete with standard Neovim behavior.",
+    "keyCharacteristics": [
+      "Keyboard-first and fully usable through standard Neovim commands.",
+      "Dense but legible hierarchy based on indentation and semantic highlights.",
+      "Theme-native presentation with no hard-coded runtime colors or fonts.",
+      "Persistent context across refreshes, filters, sorting, and repository navigation."
+    ],
+    "rules": [
+      { "name": "The Theme Ownership Rule", "body": "Runtime highlight groups link to standard Neovim groups by default. Users and colorschemes may override them; features must not require a fixed palette.", "section": "colors" },
+      { "name": "The Editor Typography Rule", "body": "Never set a font family or size from plugin runtime code. Respect the typography selected by the user for Neovim.", "section": "typography" },
+      { "name": "The Native Surface Rule", "body": "Use Neovim windows and borders as structural boundaries. Do not emulate cards, shadows, blur, or layered web surfaces.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do preserve standard Neovim behavior for windows, folds, navigation, and highlighting.",
+      "Do communicate state with text or symbols in addition to semantic color.",
+      "Do keep rendered lines concise and keep Markdown as the only persisted source of truth.",
+      "Do preserve cursor, filters, repository selection, and fold state when refreshing a valid view."
+    ],
+    "donts": [
+      "Don't build a web dashboard transplanted into a terminal, with cards, decorative chrome, or mouse-first controls.",
+      "Don't create a replacement task database that obscures or takes ownership of the underlying Markdown.",
+      "Don't add clever custom interactions that conflict with established Neovim motions, folds, windows, and highlight conventions.",
+      "Don't add dense status decoration that competes with task text instead of clarifying urgency and completion.",
+      "Don't hard-code runtime colors, font families, or font sizes."
+    ]
+  }
+}

@@ -1,8 +1,6 @@
 local M = {}
 
-local function node(name)
-  return { name = name, order = {}, children = {}, tasks = {} }
-end
+local function node(name) return { name = name, order = {}, children = {}, tasks = {} } end
 
 function M.group(tasks, untagged_label)
   local root = node(nil)

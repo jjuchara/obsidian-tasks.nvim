@@ -19,8 +19,11 @@ Before submitting a change:
 
 1. Add a regression test for behavior changes.
 2. Run the headless suite on a supported Neovim version.
-3. Run `stylua --check lua plugin tests` when StyLua is available.
+3. Run `stylua --check lua plugin tests`.
 4. Update README, help, and changelog when user-facing behavior changes.
+
+Install StyLua with `brew install stylua` on macOS or use another installation method from the upstream documentation.
+Run `stylua lua plugin tests` to format the Lua sources. The project configuration targets LuaJIT and is shared with CI.
 
 Keep modules dependency-free unless a dependency provides a clear benefit that cannot reasonably be implemented with the Neovim API.
 

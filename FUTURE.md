@@ -12,10 +12,8 @@ This document tracks ideas that are intentionally outside the current core relea
 
 ## Views and navigation
 
-- Collapse tag groups with native folds.
 - Extend sorting with creation date and repository modes.
 - Extend tag filtering with repository and date-range criteria.
-- Preserve expanded groups after refresh.
 - Preview the surrounding Markdown source.
 - Explore optional Snacks picker and Telescope integrations.
 
@@ -37,6 +35,6 @@ This document tracks ideas that are intentionally outside the current core relea
 ## Project quality
 
 - Expand unit and integration coverage with larger fixture vaults.
-- Add StyLua and Selene checks to CI.
+- Add Selene checks to CI.
 - Publish stable releases with migration notes and compatibility guarantees.
 - Add a minimal reproduction template for bug reports.

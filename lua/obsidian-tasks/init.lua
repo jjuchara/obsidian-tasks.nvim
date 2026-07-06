@@ -9,9 +9,7 @@ local config
 
 local function repository_label(repo) return repo.alias or repo.name end
 
-local function notify(message, level)
-  vim.notify("obsidian-tasks: " .. message, level or vim.log.levels.INFO)
-end
+local function notify(message, level) vim.notify("obsidian-tasks: " .. message, level or vim.log.levels.INFO) end
 
 local function ensure_setup()
   if not config then
@@ -212,8 +210,8 @@ local function create_in(repo)
         end
         local today = date.today()
         local start_default = config.creation.default_start_today and today or ""
-        local start_default_display =
-          start_default ~= "" and date.format(start_default, config.dates.display_format) or ""
+        local start_default_display = start_default ~= "" and date.format(start_default, config.dates.display_format)
+          or ""
         local due_example = date.format(assert(date.add_days(today, 1)), config.dates.display_format)
         prompt_date(
           "Start date [" .. start_default_display .. "]: ",
@@ -230,7 +228,8 @@ local function create_in(repo)
               notify("task added to " .. repository_label(repo) .. ": " .. table.concat(tags, " → "))
               ui.refresh_all()
             end)
-          end)
+          end
+        )
       end)
     end)
   end)

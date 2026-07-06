@@ -1,8 +1,6 @@
 local M = {}
 
-local function is_leap_year(year)
-  return year % 4 == 0 and (year % 100 ~= 0 or year % 400 == 0)
-end
+local function is_leap_year(year) return year % 4 == 0 and (year % 100 ~= 0 or year % 400 == 0) end
 
 local function days_in_month(year, month)
   local days = { 31, is_leap_year(year) and 29 or 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
@@ -30,9 +28,7 @@ local function normalize_components(year, month, day)
   return components(normalized) and normalized or nil
 end
 
-function M.today()
-  return os.date("%Y-%m-%d")
-end
+function M.today() return os.date("%Y-%m-%d") end
 
 function M.add_days(value, amount)
   local year, month, day = components(value)
@@ -62,9 +58,7 @@ function M.add_days(value, amount)
   return ("%04d-%02d-%02d"):format(year, month, day)
 end
 
-local function escape_pattern(value)
-  return (value:gsub("([%%%^%$%(%)%.%[%]%*%+%-%?])", "%%%1"))
-end
+local function escape_pattern(value) return (value:gsub("([%%%^%$%(%)%.%[%]%*%+%-%?])", "%%%1")) end
 
 local function parse_format(value, format)
   local pattern, fields = {}, {}
@@ -163,9 +157,10 @@ end
 
 function M.format_text(text, format)
   for _, marker in ipairs({ "➕", "🛫", "📅", "✅" }) do
-    text = text:gsub(marker .. "%s*(%d%d%d%d%-%d%d%-%d%d)", function(value)
-      return marker .. " " .. M.format(value, format)
-    end)
+    text = text:gsub(
+      marker .. "%s*(%d%d%d%d%-%d%d%-%d%d)",
+      function(value) return marker .. " " .. M.format(value, format) end
+    )
   end
   return text
 end
