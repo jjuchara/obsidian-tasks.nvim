@@ -159,7 +159,7 @@ A floating view is modal by default: clicking another window closes it. Set `vie
 1. Select a repository when more than one is configured.
 2. Enter the task text.
 3. Select or create the primary tag.
-4. Add optional tags as `gantt urgent`, `#gantt #urgent`, or `gantt, urgent`.
+4. Choose any number of additional tags from the existing-tag list. Selected tags are marked with `[x]`; use `+ new tag...` to add and select a new tag, then choose `Done`.
 5. Confirm the start date and optional deadline. Enter `yesterday`, `today`, `tomorrow`, an ISO date such as `2026-07-10`, or a date matching `dates.display_format`. Leading zeroes are optional, so `7.3.2026` is accepted for `%d.%m.%Y`.
 
 The completion notification shows the persisted tag path, for example `#work → #gantt`.

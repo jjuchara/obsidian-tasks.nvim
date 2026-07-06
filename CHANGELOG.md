@@ -4,6 +4,20 @@ All notable changes to this project will be documented here.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-06
+
+### Added
+
+- Task creation now lists existing additional tags, supports selecting several of them, and allows adding a new tag from the same selection flow.
+
+### Changed
+
+- `scripts/nvim-dev --reset` now starts with a clean task list; `--reset-resource` remains as a compatibility alias.
+
+### Fixed
+
+- The additional-tag picker now keeps the cursor on the toggled tag when reopened by Snacks Picker.
+
 ## [0.2.2] - 2026-07-03
 
 ### Changed

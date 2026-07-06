@@ -55,6 +55,9 @@ COMMANDS                                                *obsidian-tasks-commands
 
                                                *:ObsidianTasksCreate*
 :ObsidianTasksCreate        Start the guided task creation flow.
+                            Additional tags are selected from the existing-tag
+                            list. Choose tags to toggle them, use `+ new
+                            tag...` to add one, and choose `Done` to continue.
 
                                               *:ObsidianTasksRefresh*
 :ObsidianTasksRefresh       Reload all open task views from disk.

@@ -55,14 +55,107 @@ local function select_primary_tag(repo, callback)
   end)
 end
 
-local function select_additional_tags(callback)
+local function select_additional_tags(repo, primary_tag, callback)
   if not config.creation.prompt_additional_tags then
     callback({})
     return
   end
-  vim.ui.input({ prompt = "Additional tags (tag, #tag; optional): " }, function(input)
-    callback(parser.parse_tag_input(input))
-  end)
+
+  local available_tags, error_message = repository.tags(repo)
+  if not available_tags then
+    notify(error_message, vim.log.levels.ERROR)
+    return
+  end
+
+  local tags, known, selected, selected_order, ordered = {}, {}, {}, {}, {}
+  for _, tag in ipairs(available_tags) do
+    if tag ~= primary_tag and not known[tag] then
+      tags[#tags + 1] = tag
+      known[tag] = true
+    end
+  end
+
+  local function add_selected(tag)
+    if not known[tag] then
+      tags[#tags + 1] = tag
+      known[tag] = true
+    end
+    if not selected[tag] and tag ~= primary_tag then
+      selected[tag] = true
+      if not ordered[tag] then
+        selected_order[#selected_order + 1] = tag
+        ordered[tag] = true
+      end
+    end
+  end
+
+  local function result()
+    local chosen = {}
+    for _, tag in ipairs(selected_order) do
+      if selected[tag] then
+        chosen[#chosen + 1] = tag
+      end
+    end
+    return chosen
+  end
+
+  local cursor_index = 1
+  local choose
+  choose = function()
+    local items = {}
+    for _, tag in ipairs(tags) do
+      items[#items + 1] = { kind = "tag", tag = tag }
+    end
+    items[#items + 1] = { kind = "new" }
+    items[#items + 1] = { kind = "done" }
+
+    vim.ui.select(items, {
+      prompt = ("Additional tags (%d selected):"):format(#result()),
+      snacks = {
+        on_show = function(picker)
+          for index, item in ipairs(picker:items()) do
+            if item.idx == cursor_index then
+              picker.list:view(index)
+              break
+            end
+          end
+        end,
+      },
+      format_item = function(item)
+        if item.kind == "new" then
+          return "+ new tag..."
+        end
+        if item.kind == "done" then
+          return "Done"
+        end
+        return (selected[item.tag] and "[x] " or "[ ] ") .. item.tag
+      end,
+    }, function(choice, index)
+      cursor_index = index or cursor_index
+      if not choice or choice.kind == "done" then
+        callback(result())
+        return
+      end
+      if choice.kind == "tag" then
+        selected[choice.tag] = not selected[choice.tag]
+        if selected[choice.tag] and not ordered[choice.tag] then
+          selected_order[#selected_order + 1] = choice.tag
+          ordered[choice.tag] = true
+        end
+        vim.schedule(choose)
+        return
+      end
+      vim.ui.input({ prompt = "New additional tag (without #): " }, function(input)
+        for _, tag in ipairs(parser.parse_tag_input(input)) do
+          add_selected(tag)
+          cursor_index = #tags
+        end
+        vim.schedule(choose)
+      end)
+    end)
+  end
+
+  choose()
 end
 
 local function build_task_line(name, tags, start_date, due_date)
@@ -109,7 +202,7 @@ local function create_in(repo)
       return
     end
     select_primary_tag(repo, function(primary_tag)
-      select_additional_tags(function(additional_tags)
+      select_additional_tags(repo, primary_tag, function(additional_tags)
         local tags, seen = { primary_tag }, { [primary_tag] = true }
         for _, tag in ipairs(additional_tags) do
           if not seen[tag] then

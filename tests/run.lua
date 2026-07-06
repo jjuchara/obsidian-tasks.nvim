@@ -99,22 +99,62 @@ assert_equal(final[3].tags, { "#personal", "#urgent" })
 local plugin = require("obsidian-tasks")
 plugin.setup({ repositories = { repo } })
 local original_input, original_select = vim.ui.input, vim.ui.select
-local inputs = { "Created through UI", "gantt", "", "" }
-vim.ui.input = function(_, callback)
-  callback(table.remove(inputs, 1))
+local inputs = { "Created through UI", "", "" }
+vim.ui.input = function(options, callback)
+  if options.prompt == "New additional tag (without #): " then
+    callback("gantt")
+  else
+    callback(table.remove(inputs, 1))
+  end
 end
-vim.ui.select = function(_, _, callback)
-  callback("#work")
+local additional_actions = { "#frontend", "#urgent", "new", "done" }
+local visible_additional_tags = {}
+local restored_additional_tag_cursors = {}
+vim.ui.select = function(items, options, callback)
+  if options.prompt == "Primary tag:" then
+    callback("#work")
+    return
+  end
+
+  vim.list_extend(visible_additional_tags, vim.tbl_map(options.format_item, items))
+  options.snacks.on_show({
+    items = function()
+      return vim.tbl_map(function(index) return { idx = index } end, vim.fn.range(1, #items))
+    end,
+    list = {
+      view = function(_, index) restored_additional_tag_cursors[#restored_additional_tag_cursors + 1] = index end,
+    },
+  })
+  local action = table.remove(additional_actions, 1)
+  local selected_index, selected_item = vim.iter(items):enumerate():find(function(_, candidate)
+    return candidate.kind == action or candidate.tag == action
+  end)
+  callback(selected_item, selected_index)
 end
 plugin.create()
+local created_through_ui
+assert(vim.wait(1000, function()
+  created_through_ui = vim.iter(parser.parse_lines(vim.fn.readfile(temp), repo)):find(function(task)
+    return task.text:find("Created through UI", 1, true) ~= nil
+  end)
+  return created_through_ui ~= nil
+end), "task creation with multiple additional tags timed out")
 vim.ui.input, vim.ui.select = original_input, original_select
 
-local created = parser.parse_lines(vim.fn.readfile(temp), repo)
-local created_through_ui = vim.iter(created):find(function(task)
-  return task.text:find("Created through UI", 1, true) ~= nil
-end)
 assert(created_through_ui, "task created through UI is missing")
-assert_equal(created_through_ui.tags, { "#work", "#gantt" }, "create flow must persist an additional tag")
+assert_equal(
+  created_through_ui.tags,
+  { "#work", "#frontend", "#urgent", "#gantt" },
+  "create flow must persist selected existing tags and a new tag"
+)
+assert(vim.tbl_contains(visible_additional_tags, "[ ] #frontend"), "existing additional tags must be listed")
+assert(vim.tbl_contains(visible_additional_tags, "[x] #frontend"), "selected additional tags must be highlighted")
+assert(vim.tbl_contains(visible_additional_tags, "+ new tag..."), "the additional-tag list must offer a new tag")
+assert(vim.tbl_contains(visible_additional_tags, "Done"), "the additional-tag list must offer completion")
+assert(
+  vim.tbl_contains(restored_additional_tag_cursors, 3),
+  "the additional-tag picker must restore the cursor after toggling a lower tag"
+)
 
 local creation_today = date.today()
 local creation_yesterday = assert(date.add_days(creation_today, -1))
@@ -124,7 +164,7 @@ local creation_tomorrow_input = ("%d.%d.%s"):format(
   tonumber(date.format(creation_tomorrow, "%m")),
   date.format(creation_tomorrow, "%Y")
 )
-local relative_inputs = { "Flexible dates", "", "yesterday", creation_tomorrow_input }
+local relative_inputs = { "Flexible dates", "yesterday", creation_tomorrow_input }
 local date_prompts = {}
 vim.ui.input = function(options, callback)
   if options.prompt:find("date", 1, true) then
@@ -132,8 +172,12 @@ vim.ui.input = function(options, callback)
   end
   callback(table.remove(relative_inputs, 1))
 end
-vim.ui.select = function(_, _, callback)
-  callback("#work")
+vim.ui.select = function(items, options, callback)
+  if options.prompt == "Primary tag:" then
+    callback("#work")
+  else
+    callback(items[#items])
+  end
 end
 plugin.create()
 vim.ui.input, vim.ui.select = original_input, original_select
