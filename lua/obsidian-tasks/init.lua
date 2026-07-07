@@ -21,6 +21,8 @@ local tag_picker_hint = "Space toggle tag · Enter continue"
 
 local function tag_picker_prompt(prompt) return prompt .. " [" .. tag_picker_hint .. "]" end
 
+local function tag_picker_hint_item() return { kind = "hint", label = "Hotkeys: " .. tag_picker_hint } end
+
 local function tag_picker_snacks_options()
   local function confirm_done(picker)
     picker.list:view(1)
@@ -32,7 +34,7 @@ local function tag_picker_snacks_options()
     actions = {
       confirm_done = confirm_done,
       toggle_tag = function(picker, item)
-        if item and item.item and item.item.kind ~= "done" then
+        if item and item.item and item.item.kind == "tag" then
           item.item.toggle = true
           picker:action("confirm")
         end
@@ -89,11 +91,15 @@ local function select_primary_tag(repo, callback, on_cancel)
       items[#items + 1] = { kind = "tag", tag = tag }
     end
     items[#items + 1] = { kind = "new", label = new_tag }
+    items[#items + 1] = tag_picker_hint_item()
 
     local select_options = {
       prompt = tag_picker_prompt("Primary tag:"),
       snacks = tag_picker_snacks_options(),
       format_item = function(item)
+        if item.kind == "hint" then
+          return item.label
+        end
         if item.kind == "done" then
           return "Done"
         end
@@ -123,6 +129,10 @@ local function select_primary_tag(repo, callback, on_cancel)
         return
       end
       if choice.kind == "done" then
+        callback(selected_tag)
+        return
+      end
+      if choice.kind == "hint" then
         callback(selected_tag)
         return
       end
@@ -204,11 +214,15 @@ local function select_additional_tags(repo, primary_tag, callback, on_cancel)
       items[#items + 1] = { kind = "tag", tag = tag }
     end
     items[#items + 1] = { kind = "new" }
+    items[#items + 1] = tag_picker_hint_item()
 
     local select_options = {
       prompt = tag_picker_prompt(("Additional tags (%d selected):"):format(#result())),
       snacks = tag_picker_snacks_options(),
       format_item = function(item)
+        if item.kind == "hint" then
+          return item.label
+        end
         if item.kind == "new" then
           return "+ new tag..."
         end
@@ -231,7 +245,7 @@ local function select_additional_tags(repo, primary_tag, callback, on_cancel)
 
     vim.ui.select(items, select_options, function(choice, index)
       cursor_index = index or cursor_index
-      if not choice or choice.kind == "done" then
+      if not choice or choice.kind == "done" or choice.kind == "hint" then
         callback(result())
         return
       end

@@ -20,6 +20,10 @@ local function select_done_item(items)
   return vim.iter(items):find(function(item) return item.kind == "done" end)
 end
 
+local function select_new_item(items)
+  return vim.iter(items):find(function(item) return item.kind == "new" end)
+end
+
 local function is_primary_tag_prompt(prompt) return prompt:find("Primary tag:", 1, true) ~= nil end
 
 local function is_additional_tags_prompt(prompt) return prompt:find("Additional tags", 1, true) ~= nil end
@@ -264,6 +268,10 @@ assert(vim.tbl_contains(visible_additional_tags, "[ ] #frontend"), "existing add
 assert(vim.tbl_contains(visible_additional_tags, "[x] #frontend"), "selected additional tags must be highlighted")
 assert(vim.tbl_contains(visible_additional_tags, "+ new tag..."), "the additional-tag list must offer a new tag")
 assert(vim.tbl_contains(visible_additional_tags, "Done"), "the additional-tag list must offer completion")
+assert(
+  vim.tbl_contains(visible_additional_tags, "Hotkeys: Space toggle tag · Enter continue"),
+  "the additional-tag list must show hotkey hints"
+)
 assert(initial_additional_tag_picker_kept_default_focus, "the initial additional-tag picker must focus the input field")
 assert(initial_additional_tag_picker_defaulted_to_done, "the initial additional-tag picker must default Enter to Done")
 assert(
@@ -321,7 +329,7 @@ vim.ui.select = function(items, options, callback)
   if options.prompt == "Repository:" then
     callback(items[2])
   elseif is_primary_tag_prompt(options.prompt) then
-    callback(items[#items])
+    callback(select_new_item(items))
   else
     callback(select_done_item(items))
   end
@@ -346,6 +354,10 @@ local new_tag_created = vim.wait(1000, function()
 end)
 vim.ui.input, vim.ui.select = original_input, original_select
 assert(new_tag_created, "task creation must continue after entering a new primary tag")
+local new_tag_task = vim
+  .iter(assert(repository.load({ name = "new-tag-test", path = new_tag_temp })))
+  :find(function(task) return task.text:find("Created with a new primary tag", 1, true) ~= nil end)
+assert_equal(new_tag_task.tags, { "#new-primary" }, "new primary tag must be persisted")
 local original_repo_tasks = assert(repository.load(repo))
 assert(
   not vim
