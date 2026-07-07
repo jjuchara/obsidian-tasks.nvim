@@ -20,7 +20,15 @@ local function select_done_item(items)
   return vim.iter(items):find(function(item) return item.kind == "done" end)
 end
 
+local function is_primary_tag_prompt(prompt) return prompt:find("Primary tag:", 1, true) ~= nil end
+
+local function is_additional_tags_prompt(prompt) return prompt:find("Additional tags", 1, true) ~= nil end
+
 local function assert_tag_picker_hotkeys(options, message)
+  assert(
+    options.prompt:find("Space toggle tag", 1, true) and options.prompt:find("Enter continue", 1, true),
+    message .. " prompt must include hotkey hints"
+  )
   assert(options.snacks, message .. " must configure Snacks picker options")
   assert_equal(options.snacks.focus, "input", message .. " must focus the input")
   assert(options.snacks.actions.confirm_done, message .. " must define Enter continuation")
@@ -206,7 +214,7 @@ local restored_additional_tag_cursors = {}
 local initial_additional_tag_picker_kept_default_focus = false
 local initial_additional_tag_picker_defaulted_to_done = false
 vim.ui.select = function(items, options, callback)
-  if options.prompt == "Primary tag:" then
+  if is_primary_tag_prompt(options.prompt) then
     assert_tag_picker_hotkeys(options, "primary-tag picker")
     callback(select_tag_item(items, "#work"))
     return
@@ -280,7 +288,7 @@ vim.ui.input = function(options, callback)
   callback(table.remove(relative_inputs, 1))
 end
 vim.ui.select = function(items, options, callback)
-  if options.prompt == "Primary tag:" then
+  if is_primary_tag_prompt(options.prompt) then
     callback(select_tag_item(items, "#work"))
   else
     callback(select_done_item(items))
@@ -312,7 +320,7 @@ local new_tag_input_active = false
 vim.ui.select = function(items, options, callback)
   if options.prompt == "Repository:" then
     callback(items[2])
-  elseif options.prompt == "Primary tag:" then
+  elseif is_primary_tag_prompt(options.prompt) then
     callback(items[#items])
   else
     callback(select_done_item(items))
@@ -353,7 +361,7 @@ plugin.setup({ repositories = { no_tag_repo } })
 local no_tag_inputs = { "Created without tags", "", "" }
 vim.ui.input = function(_, callback) callback(table.remove(no_tag_inputs, 1)) end
 vim.ui.select = function(items, options, callback)
-  assert(options.prompt == "Primary tag:" or options.prompt:find("Additional tags", 1, true))
+  assert(is_primary_tag_prompt(options.prompt) or is_additional_tags_prompt(options.prompt))
   callback(select_done_item(items))
 end
 plugin.create()
@@ -566,7 +574,7 @@ assert(
 local create_inputs = { "Created then undone", "", "" }
 vim.ui.input = function(_, callback) callback(table.remove(create_inputs, 1)) end
 vim.ui.select = function(items, options, callback)
-  if options.prompt == "Primary tag:" then
+  if is_primary_tag_prompt(options.prompt) then
     callback(select_tag_item(items, "#work"))
   else
     callback(select_done_item(items))
@@ -645,7 +653,7 @@ local command_create_inputs = { "Created by command", "", "" }
 vim.ui.input = function(_, callback) callback(table.remove(command_create_inputs, 1)) end
 vim.ui.select = function(items, options, callback)
   assert(options.prompt ~= "Repository:", "create command must use the active task-view repository")
-  if options.prompt == "Primary tag:" then
+  if is_primary_tag_prompt(options.prompt) then
     callback(select_tag_item(items, "#frontend"))
   else
     callback(select_done_item(items))
@@ -779,7 +787,7 @@ vim.ui.input = function(_, callback)
 end
 vim.ui.select = function(items, options, callback)
   with_prompt_window(function()
-    if options.prompt == "Primary tag:" then
+    if is_primary_tag_prompt(options.prompt) then
       callback(select_tag_item(items, "#work"))
     else
       callback(select_done_item(items))

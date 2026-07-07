@@ -17,6 +17,10 @@ local function ensure_setup()
   end
 end
 
+local tag_picker_hint = "Space toggle tag · Enter continue"
+
+local function tag_picker_prompt(prompt) return prompt .. " [" .. tag_picker_hint .. "]" end
+
 local function tag_picker_snacks_options()
   local function confirm_done(picker)
     picker.list:view(1)
@@ -36,7 +40,7 @@ local function tag_picker_snacks_options()
     },
     win = {
       input = {
-        footer = "Space toggle tag · Enter continue",
+        footer = tag_picker_hint,
         footer_pos = "center",
         keys = {
           ["<CR>"] = { "confirm_done", mode = { "n", "i" }, desc = "Continue" },
@@ -44,7 +48,7 @@ local function tag_picker_snacks_options()
         },
       },
       list = {
-        footer = "Space toggle tag · Enter continue",
+        footer = tag_picker_hint,
         footer_pos = "center",
         keys = {
           ["<CR>"] = "confirm_done",
@@ -87,7 +91,7 @@ local function select_primary_tag(repo, callback, on_cancel)
     items[#items + 1] = { kind = "new", label = new_tag }
 
     local select_options = {
-      prompt = "Primary tag:",
+      prompt = tag_picker_prompt("Primary tag:"),
       snacks = tag_picker_snacks_options(),
       format_item = function(item)
         if item.kind == "done" then
@@ -202,7 +206,7 @@ local function select_additional_tags(repo, primary_tag, callback, on_cancel)
     items[#items + 1] = { kind = "new" }
 
     local select_options = {
-      prompt = ("Additional tags (%d selected):"):format(#result()),
+      prompt = tag_picker_prompt(("Additional tags (%d selected):"):format(#result())),
       snacks = tag_picker_snacks_options(),
       format_item = function(item)
         if item.kind == "new" then
