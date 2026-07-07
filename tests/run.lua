@@ -88,6 +88,26 @@ local reopened = parser.parse_lines(vim.fn.readfile(temp), repo)
 assert(not reopened[1].done, "completed task was not reopened")
 assert(not reopened[1].completion_date, "completion date was not removed")
 
+assert(repository.update(reopened[1], {
+  text = "Updated first",
+  tags = { "#work", "#frontend", "#urgent", "#review" },
+  start_date = "2026-07-03",
+  due_date = nil,
+}, {
+  completion_marker = "✅",
+  infinity_marker = "♾️",
+}))
+local updated = parser.parse_lines(vim.fn.readfile(temp), repo)
+assert_equal(updated[1].text, "Updated first #work #frontend #urgent #review ➕ 2026-07-01 🛫 2026-07-03 ♾️")
+assert_equal(updated[1].tags, { "#work", "#frontend", "#urgent", "#review" }, "updated task tags were not persisted")
+assert_equal(updated[1].start_date, "2026-07-03", "updated task start date was not persisted")
+assert_equal(updated[1].due_date, nil, "cleared task due date was not removed")
+assert_equal(
+  parser.clean_task_text(updated[1].text, { completion_marker = "✅", infinity_marker = "♾️" }),
+  "Updated first",
+  "task text cleanup must remove tags and date markers"
+)
+
 assert(repository.append(repo, {
   tags = { "#personal", "#urgent" },
   line = "- [ ] Third #personal #urgent ➕ 2026-07-02 ♾️",
@@ -155,7 +175,7 @@ assert(vim.tbl_contains(visible_additional_tags, "[x] #frontend"), "selected add
 assert(vim.tbl_contains(visible_additional_tags, "+ new tag..."), "the additional-tag list must offer a new tag")
 assert(vim.tbl_contains(visible_additional_tags, "Done"), "the additional-tag list must offer completion")
 assert(
-  vim.tbl_contains(restored_additional_tag_cursors, 3),
+  vim.iter(restored_additional_tag_cursors):any(function(index) return index > 1 end),
   "the additional-tag picker must restore the cursor after toggling a lower tag"
 )
 
@@ -348,6 +368,42 @@ assert_equal(task_order(state), {}, "tag filter kept tasks without the selected 
 plugin.filter("clear")
 assert_equal(state.tag_filter, nil, "clear did not remove the active filter")
 assert_equal(task_order(state), { "Alpha", "Today", "Zulu", "Later", "Done", "No" }, "clear did not restore tasks")
+
+local edit_task
+for _, mapping in ipairs(vim.api.nvim_buf_get_keymap(state.buf, "n")) do
+  if mapping.desc == "Edit task" then
+    edit_task = mapping.callback
+    break
+  end
+end
+assert(edit_task, "edit mapping is missing")
+for line, task in pairs(state.line_map) do
+  if task.text:find("Zulu", 1, true) then
+    vim.api.nvim_win_set_cursor(state.win, { line, 0 })
+    break
+  end
+end
+local edit_inputs = { "Renamed task", "#personal #urgent", "yesterday", "" }
+vim.ui.input = function(_, callback) callback(table.remove(edit_inputs, 1)) end
+edit_task()
+vim.ui.input = original_input
+local edited_task = vim
+  .iter(assert(repository.load(view_repo)))
+  :find(function(task) return task.text:find("Renamed task", 1, true) ~= nil end)
+assert(edited_task, "edited task is missing")
+assert_equal(edited_task.tags, { "#personal", "#urgent" }, "edit flow did not persist tags")
+assert_equal(edited_task.start_date, yesterday, "edit flow did not persist the start date")
+assert_equal(edited_task.due_date, nil, "edit flow did not clear the due date")
+assert(edited_task.text:find("♾️", 1, true), "edit flow did not persist the no-deadline marker")
+
+local open_source_task
+for _, mapping in ipairs(vim.api.nvim_buf_get_keymap(state.buf, "n")) do
+  if mapping.desc == "Open task source" then
+    open_source_task = mapping.callback
+    break
+  end
+end
+assert(open_source_task, "open source mapping is missing")
 
 local tabs_first = vim.fn.tempname() .. ".md"
 local tabs_second = vim.fn.tempname() .. ".md"

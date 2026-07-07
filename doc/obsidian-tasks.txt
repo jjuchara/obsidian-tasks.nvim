@@ -76,7 +76,8 @@ TASK VIEW                                              *obsidian-tasks-task-view
 Default mappings inside a task view:
 
   <Space>    Toggle the task and its completion date.
-  <CR>       Edit the source Markdown at the task line.
+  <CR>       Edit task text, tags, start date, and due date.
+  gf         Open the source Markdown at the task line.
   s          Cycle active, done, and all statuses.
   o          Cycle source, deadline, and title sorting.
   f          Select a tag filter or clear the active filter.
@@ -149,6 +150,7 @@ The complete defaults are: >lua
       create = nil,
       toggle = "<Space>",
       edit = "<CR>",
+      open_source = "gf",
       refresh = "r",
       close = { "q", "<Esc>" },
       cycle_status = "s",
@@ -175,6 +177,10 @@ Leading zeroes in numeric months and days are optional.
 in the task view and date examples in creation prompts without changing the
 source Markdown. Incomplete tasks due today or tomorrow use
 `ObsidianTasksDueSoon`; overdue tasks use `ObsidianTasksOverdue`.
+
+Editing a task from the task view rewrites the Markdown task line while
+preserving the checkbox state, creation date, and completion date. Clearing the
+due date writes the configured no-deadline marker.
 
 Deadline sorting adds virtual `#overdue`, `#due-soon`, and `#on-track` groups.
 Due-soon covers today and tomorrow. Later deadlines, completed tasks, and

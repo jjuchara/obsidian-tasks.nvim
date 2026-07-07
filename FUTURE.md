@@ -19,7 +19,6 @@ This document tracks ideas that are intentionally outside the current core relea
 
 ## Editing
 
-- Edit task text, tags, and dates directly from the task view.
 - Move tasks between repositories and tag groups.
 - Toggle multiple selected tasks in one operation.
 - Add confirmed deletion and undo for the latest operation.

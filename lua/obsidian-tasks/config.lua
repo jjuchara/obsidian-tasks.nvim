@@ -32,6 +32,7 @@ M.defaults = {
     create = nil,
     toggle = "<Space>",
     edit = "<CR>",
+    open_source = "gf",
     refresh = "r",
     close = { "q", "<Esc>" },
     cycle_status = "s",

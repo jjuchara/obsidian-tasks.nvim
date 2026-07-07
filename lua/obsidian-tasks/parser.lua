@@ -16,6 +16,10 @@ local function extract_tags(text)
   return tags
 end
 
+local function strip_tags(text) return text:gsub("#([^%s#%[%]%(%){}<>,!%?;:`]+)", "") end
+
+local function compact_spaces(text) return vim.trim(text:gsub("%s+", " ")) end
+
 local function inline_tags(line, section_tag)
   local tags = extract_tags(line)
   if #tags == 0 and section_tag then
@@ -71,6 +75,21 @@ function M.parse_lines(lines, repository)
 end
 
 function M.extract_tags(text) return extract_tags(text) end
+
+function M.clean_task_text(text, options)
+  options = options or {}
+  local result = text
+  result = result:gsub("%s*➕%s*%d%d%d%d%-%d%d%-%d%d", "")
+  result = result:gsub("%s*🛫%s*%d%d%d%d%-%d%d%-%d%d", "")
+  result = result:gsub("%s*📅%s*%d%d%d%d%-%d%d%-%d%d", "")
+  if options.completion_marker then
+    result = result:gsub("%s*" .. vim.pesc(options.completion_marker) .. "%s*%d%d%d%d%-%d%d%-%d%d", "")
+  end
+  if options.infinity_marker then
+    result = result:gsub("%s*" .. vim.pesc(options.infinity_marker), "")
+  end
+  return compact_spaces(strip_tags(result))
+end
 
 function M.parse_tag_input(input)
   local tags = {}

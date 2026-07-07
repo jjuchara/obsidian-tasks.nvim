@@ -122,6 +122,7 @@ require("obsidian-tasks").setup({
     create = "<leader>ta",         -- global mapping, nil disables it
     toggle = "<Space>",
     edit = "<CR>",
+    open_source = "gf",
     refresh = "r",
     close = { "q", "<Esc>" },
     cycle_status = "s",
@@ -150,7 +151,8 @@ require("obsidian-tasks").setup({
 | Key | Action |
 |---|---|
 | `<Space>` | Toggle the task under the cursor |
-| `<CR>` | Open the Markdown source at the task line |
+| `<CR>` | Edit task text, tags, start date, and deadline |
+| `gf` | Open the Markdown source at the task line |
 | `s` | Cycle `active → done → all` |
 | `o` | Cycle `source → deadline → title` sorting |
 | `f` | Select a tag filter or clear the active filter |
@@ -173,6 +175,8 @@ Tag groups use native Neovim folds and expose a fold column for mouse interactio
 The completion notification shows the persisted tag path, for example `#work → #gantt`.
 Dates are always stored as `YYYY-MM-DD`. `dates.display_format` changes rendered dates and the examples shown in creation prompts without modifying Markdown. Active tasks due today or tomorrow use `ObsidianTasksDueSoon`; overdue tasks use `ObsidianTasksOverdue`.
 Deadline sorting adds virtual `#overdue`, `#due-soon`, and `#on-track` groups. `#due-soon` covers today and tomorrow; later deadlines, completed tasks, and tasks without deadlines are `#on-track`.
+
+Editing a task from the task view rewrites the Markdown task line while preserving the checkbox state, creation date, and completion date. Clearing the deadline stores the configured no-deadline marker.
 
 ## Markdown format
 
@@ -213,7 +217,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the contribution workflow and `:help 
 
 ## Status
 
-The core workflow is usable today. Advanced queries, recurrence, live filesystem watching, and direct task editing are tracked in [FUTURE.md](FUTURE.md).
+The core workflow is usable today. Advanced queries, recurrence, and live filesystem watching are tracked in [FUTURE.md](FUTURE.md).
 
 ## License
 

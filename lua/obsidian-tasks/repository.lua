@@ -61,6 +61,31 @@ local function locate(lines, task)
   return nil, "task is ambiguous after an external file change"
 end
 
+local function build_task_line(task, updated, options)
+  options = options or {}
+  local completion_marker = options.completion_marker or "✅"
+  local checkbox = task.done and "[x]" or "[ ]"
+  local line = (task.indent or "") .. "- " .. checkbox .. " " .. updated.text
+  if #updated.tags > 0 then
+    line = line .. " " .. table.concat(updated.tags, " ")
+  end
+  if task.created_date then
+    line = line .. " ➕ " .. task.created_date
+  end
+  if updated.start_date then
+    line = line .. " 🛫 " .. updated.start_date
+  end
+  if updated.due_date then
+    line = line .. " 📅 " .. updated.due_date
+  elseif options.infinity_marker then
+    line = line .. " " .. options.infinity_marker
+  end
+  if task.completion_date then
+    line = line .. " " .. completion_marker .. " " .. task.completion_date
+  end
+  return line
+end
+
 function M.toggle(task, completion)
   local lines, error_message = read_lines(task.path)
   if not lines then
@@ -91,6 +116,27 @@ function M.toggle(task, completion)
     return nil, write_error
   end
   return true, { path = task.path, lnum = lnum }
+end
+
+function M.update(task, updated, options)
+  local lines, error_message = read_lines(task.path)
+  if not lines then
+    return nil, error_message
+  end
+  local lnum, locate_error = locate(lines, task)
+  if not lnum then
+    return nil, locate_error
+  end
+  if not lines[lnum]:match("^%s*%- %[[ xX]%]") then
+    return nil, "source line is no longer a task"
+  end
+
+  lines[lnum] = build_task_line(task, updated, options)
+  local ok, write_error = write_lines(task.path, lines)
+  if not ok then
+    return nil, write_error
+  end
+  return true, { path = task.path, lnum = lnum, raw = lines[lnum] }
 end
 
 function M.tags(repository)
