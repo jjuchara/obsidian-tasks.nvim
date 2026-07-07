@@ -4,6 +4,14 @@ All notable changes to this project will be documented here.
 
 ## [Unreleased]
 
+## [0.7.7] - 2026-07-07
+
+### Fixed
+
+- Primary tag pickers now show `Space select tag` in the footer and use Space to choose the highlighted tag, while additional-tag pickers keep checkbox toggling.
+- Tag picker footers now attach to the picker layout, and Space activates the `+ new tag...` item.
+- Tag filter pickers now show footer hotkeys and let Space apply the highlighted filter.
+
 ## [0.7.6] - 2026-07-07
 
 ### Changed
@@ -152,7 +160,8 @@ All notable changes to this project will be documented here.
 - Atomic writes and stale-line protection.
 - English, Russian, and `:help` documentation.
 
-[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.6...HEAD
+[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.7...HEAD
+[0.7.7]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.4...v0.7.5
 [0.7.4]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.3...v0.7.4

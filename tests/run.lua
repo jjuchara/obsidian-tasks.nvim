@@ -39,22 +39,36 @@ local function chunks_text(value)
   return table.concat(parts)
 end
 
-local function assert_tag_picker_hotkeys(options, message)
-  assert(not options.prompt:find("Space toggle tag", 1, true), message .. " prompt must not duplicate hotkey hints")
+local function assert_tag_picker_hotkeys(options, message, expected)
+  assert(not options.prompt:find("Space ", 1, true), message .. " prompt must not duplicate hotkey hints")
   assert(options.snacks, message .. " must configure Snacks picker options")
   assert_equal(options.snacks.focus, "input", message .. " must focus the input")
   assert(options.snacks.actions.confirm_done, message .. " must define Enter continuation")
-  assert(options.snacks.actions.toggle_tag, message .. " must define Space toggle")
-  assert_equal(
-    options.snacks.win.input.footer,
-    "Space toggle tag · Enter continue",
-    message .. " input footer is wrong"
-  )
-  assert_equal(options.snacks.win.list.footer, "Space toggle tag · Enter continue", message .. " list footer is wrong")
+  assert(options.snacks.actions[expected.space_action], message .. " must define Space action")
+  assert_equal(options.snacks.layout.layout.footer, expected.footer, message .. " layout footer is wrong")
+  assert_equal(options.snacks.layout.layout.footer_pos, "center", message .. " layout footer position is wrong")
+  assert_equal(options.snacks.win.input.footer, nil, message .. " input footer must not duplicate layout footer")
+  assert_equal(options.snacks.win.list.footer, nil, message .. " list footer must not duplicate layout footer")
   assert_equal(options.snacks.win.input.keys["<CR>"][1], "confirm_done", message .. " input Enter mapping is wrong")
-  assert_equal(options.snacks.win.input.keys["<Space>"][1], "toggle_tag", message .. " input Space mapping is wrong")
+  assert_equal(
+    options.snacks.win.input.keys["<Space>"][1],
+    expected.space_action,
+    message .. " input Space mapping is wrong"
+  )
   assert_equal(options.snacks.win.list.keys["<CR>"], "confirm_done", message .. " list Enter mapping is wrong")
-  assert_equal(options.snacks.win.list.keys["<Space>"], "toggle_tag", message .. " list Space mapping is wrong")
+  assert_equal(
+    options.snacks.win.list.keys["<Space>"],
+    expected.space_action,
+    message .. " list Space mapping is wrong"
+  )
+  assert_equal(options.snacks.win.input.keys["<Space>"].desc, expected.space_desc, message .. " Space desc is wrong")
+end
+
+local function assert_space_confirms_new_tag(options, message)
+  local confirmed = false
+  local picker = { action = function(_, action) confirmed = action == "confirm" end }
+  options.snacks.actions[options.snacks.win.input.keys["<Space>"][1]](picker, { item = { kind = "new" } })
+  assert(confirmed, message .. " Space must activate the new-tag item")
 end
 
 assert_equal(date.parse(" TODAY ", "2024-02-28"), "2024-02-28", "today alias must be normalized")
@@ -233,12 +247,27 @@ local initial_additional_tag_picker_kept_default_focus = false
 local initial_additional_tag_picker_defaulted_to_done = false
 vim.ui.select = function(items, options, callback)
   if is_primary_tag_prompt(options.prompt) then
-    assert_tag_picker_hotkeys(options, "primary-tag picker")
+    assert_tag_picker_hotkeys(options, "primary-tag picker", {
+      footer = "Space select tag · Enter continue",
+      space_action = "select_tag",
+      space_desc = "Select tag",
+    })
+    assert_equal(
+      options.format_item(select_tag_item(items, "#work")),
+      "#work",
+      "primary tags must not render checkboxes"
+    )
+    assert_space_confirms_new_tag(options, "primary-tag picker")
     callback(select_tag_item(items, "#work"))
     return
   end
 
-  assert_tag_picker_hotkeys(options, "additional-tag picker")
+  assert_tag_picker_hotkeys(options, "additional-tag picker", {
+    footer = "Space toggle tag · Enter continue",
+    space_action = "toggle_tag",
+    space_desc = "Toggle tag",
+  })
+  assert_space_confirms_new_tag(options, "additional-tag picker")
   vim.list_extend(visible_additional_tags, vim.tbl_map(options.format_item, items))
   if options.snacks and options.snacks.on_show then
     options.snacks.on_show({
@@ -491,6 +520,29 @@ assert(
 local original_filter_select = vim.ui.select
 vim.ui.select = function(items, options, callback)
   assert_equal(options.prompt, "Filter by tag:", "filter picker prompt is incorrect")
+  assert(options.snacks, "filter picker must configure Snacks picker options")
+  assert_equal(options.snacks.focus, "input", "filter picker must focus the input")
+  assert_equal(
+    options.snacks.layout.layout.footer,
+    "Space apply filter · Enter apply filter",
+    "filter picker footer is wrong"
+  )
+  assert_equal(options.snacks.layout.layout.footer_pos, "center", "filter picker footer position is wrong")
+  assert_equal(options.snacks.win.input.keys["<CR>"][1], "confirm", "filter picker input Enter mapping is wrong")
+  assert_equal(
+    options.snacks.win.input.keys["<Space>"][1],
+    "apply_filter",
+    "filter picker input Space mapping is wrong"
+  )
+  assert_equal(options.snacks.win.input.keys["<Space>"].desc, "Apply filter", "filter picker Space desc is wrong")
+  assert_equal(options.snacks.win.list.keys["<CR>"], "confirm", "filter picker list Enter mapping is wrong")
+  assert_equal(options.snacks.win.list.keys["<Space>"], "apply_filter", "filter picker list Space mapping is wrong")
+  local confirmed = false
+  options.snacks.actions.apply_filter(
+    { action = function(_, action) confirmed = action == "confirm" end },
+    { item = items[2] }
+  )
+  assert(confirmed, "filter picker Space must apply the highlighted filter")
   local selected = vim.iter(items):find(function(item) return item.tag == "#work" end)
   callback(selected)
 end

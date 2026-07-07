@@ -59,6 +59,7 @@ COMMANDS                                                *obsidian-tasks-commands
                             list. Press Enter immediately to continue without
                             extra tags, press Space to toggle tags, or use `+
                             new tag...` to add one. The primary-tag picker
+                            uses Space to select the tag under the cursor and
                             also accepts Enter with no selected tag.
 
                                               *:ObsidianTasksRefresh*

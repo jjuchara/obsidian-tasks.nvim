@@ -17,9 +17,7 @@ local function ensure_setup()
   end
 end
 
-local tag_picker_hint = "Space toggle tag · Enter continue"
-
-local function tag_picker_snacks_options()
+local function tag_picker_snacks_options(hint, space_action, space_desc)
   local function confirm_done(picker)
     picker.list:view(1)
     picker:action("confirm")
@@ -29,28 +27,37 @@ local function tag_picker_snacks_options()
     focus = "input",
     actions = {
       confirm_done = confirm_done,
+      select_tag = function(picker, item)
+        if item and item.item and (item.item.kind == "tag" or item.item.kind == "new") then
+          picker:action("confirm")
+        end
+      end,
       toggle_tag = function(picker, item)
-        if item and item.item and item.item.kind == "tag" then
+        if item and item.item and item.item.kind == "new" then
+          picker:action("confirm")
+        elseif item and item.item and item.item.kind == "tag" then
           item.item.toggle = true
           picker:action("confirm")
         end
       end,
     },
+    layout = {
+      layout = {
+        footer = hint,
+        footer_pos = "center",
+      },
+    },
     win = {
       input = {
-        footer = tag_picker_hint,
-        footer_pos = "center",
         keys = {
           ["<CR>"] = { "confirm_done", mode = { "n", "i" }, desc = "Continue" },
-          ["<Space>"] = { "toggle_tag", mode = { "n", "i" }, desc = "Toggle tag" },
+          ["<Space>"] = { space_action, mode = { "n", "i" }, desc = space_desc },
         },
       },
       list = {
-        footer = tag_picker_hint,
-        footer_pos = "center",
         keys = {
           ["<CR>"] = "confirm_done",
-          ["<Space>"] = "toggle_tag",
+          ["<Space>"] = space_action,
         },
       },
     },
@@ -78,8 +85,6 @@ local function select_primary_tag(repo, callback, on_cancel)
     return
   end
   local new_tag = "+ new tag..."
-  local selected_tag
-  local cursor_index
   local choose
   choose = function()
     local items = { { kind = "done" } }
@@ -90,7 +95,7 @@ local function select_primary_tag(repo, callback, on_cancel)
 
     local select_options = {
       prompt = "Primary tag:",
-      snacks = tag_picker_snacks_options(),
+      snacks = tag_picker_snacks_options("Space select tag · Enter continue", "select_tag", "Select tag"),
       format_item = function(item)
         if item.kind == "done" then
           return "Done"
@@ -98,22 +103,11 @@ local function select_primary_tag(repo, callback, on_cancel)
         if item.kind == "new" then
           return item.label
         end
-        return (selected_tag == item.tag and "[x] " or "[ ] ") .. item.tag
+        return item.tag
       end,
     }
-    if cursor_index then
-      select_options.snacks.on_show = function(picker)
-        for index, item in ipairs(picker:items()) do
-          if item.idx == cursor_index then
-            picker.list:view(index)
-            break
-          end
-        end
-      end
-    end
 
-    vim.ui.select(items, select_options, function(choice, index)
-      cursor_index = index or cursor_index
+    vim.ui.select(items, select_options, function(choice)
       if not choice then
         if on_cancel then
           on_cancel()
@@ -121,16 +115,11 @@ local function select_primary_tag(repo, callback, on_cancel)
         return
       end
       if choice.kind == "done" then
-        callback(selected_tag)
+        callback(nil)
         return
       end
       if choice.kind == "tag" then
-        if not choice.toggle then
-          callback(choice.tag)
-          return
-        end
-        selected_tag = selected_tag == choice.tag and nil or choice.tag
-        vim.schedule(choose)
+        callback(choice.tag)
         return
       end
       vim.ui.input({ prompt = "New tag (without #): " }, function(input)
@@ -205,7 +194,7 @@ local function select_additional_tags(repo, primary_tag, callback, on_cancel)
 
     local select_options = {
       prompt = ("Additional tags (%d selected):"):format(#result()),
-      snacks = tag_picker_snacks_options(),
+      snacks = tag_picker_snacks_options("Space toggle tag · Enter continue", "toggle_tag", "Toggle tag"),
       format_item = function(item)
         if item.kind == "new" then
           return "+ new tag..."

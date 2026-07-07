@@ -17,6 +17,39 @@ local function repository_label(repo) return repo.alias or repo.name end
 
 local function notify(message, level) vim.notify("obsidian-tasks: " .. message, level or vim.log.levels.INFO) end
 
+local function filter_picker_snacks_options()
+  return {
+    focus = "input",
+    actions = {
+      apply_filter = function(picker, item)
+        if item and item.item then
+          picker:action("confirm")
+        end
+      end,
+    },
+    layout = {
+      layout = {
+        footer = "Space apply filter · Enter apply filter",
+        footer_pos = "center",
+      },
+    },
+    win = {
+      input = {
+        keys = {
+          ["<CR>"] = { "confirm", mode = { "n", "i" }, desc = "Apply filter" },
+          ["<Space>"] = { "apply_filter", mode = { "n", "i" }, desc = "Apply filter" },
+        },
+      },
+      list = {
+        keys = {
+          ["<CR>"] = "confirm",
+          ["<Space>"] = "apply_filter",
+        },
+      },
+    },
+  }
+end
+
 local function is_valid(state) return vim.api.nvim_buf_is_valid(state.buf) and vim.api.nvim_win_is_valid(state.win) end
 
 local function matches_status(task, status)
@@ -397,6 +430,7 @@ function M.select_filter(repositories, callback)
   filter_picker_active = true
   vim.ui.select(items, {
     prompt = "Filter by tag:",
+    snacks = filter_picker_snacks_options(),
     format_item = function(item) return item.label end,
   }, function(choice)
     filter_picker_active = false
