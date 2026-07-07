@@ -86,12 +86,11 @@ local function select_primary_tag(repo, callback, on_cancel)
   local cursor_index
   local choose
   choose = function()
-    local items = { { kind = "done" } }
+    local items = { { kind = "done" }, tag_picker_hint_item() }
     for _, tag in ipairs(tags) do
       items[#items + 1] = { kind = "tag", tag = tag }
     end
     items[#items + 1] = { kind = "new", label = new_tag }
-    items[#items + 1] = tag_picker_hint_item()
 
     local select_options = {
       prompt = tag_picker_prompt("Primary tag:"),
@@ -209,12 +208,11 @@ local function select_additional_tags(repo, primary_tag, callback, on_cancel)
   local cursor_index
   local choose
   choose = function()
-    local items = { { kind = "done" } }
+    local items = { { kind = "done" }, tag_picker_hint_item() }
     for _, tag in ipairs(tags) do
       items[#items + 1] = { kind = "tag", tag = tag }
     end
     items[#items + 1] = { kind = "new" }
-    items[#items + 1] = tag_picker_hint_item()
 
     local select_options = {
       prompt = tag_picker_prompt(("Additional tags (%d selected):"):format(#result())),

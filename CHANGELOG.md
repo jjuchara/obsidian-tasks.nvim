@@ -4,6 +4,12 @@ All notable changes to this project will be documented here.
 
 ## [Unreleased]
 
+## [0.7.4] - 2026-07-07
+
+### Fixed
+
+- Tag-picker hotkey hints now appear near the top of the list so they are visible even when many tags exceed the picker height.
+
 ## [0.7.3] - 2026-07-07
 
 ### Fixed
@@ -133,7 +139,8 @@ All notable changes to this project will be documented here.
 - Atomic writes and stale-line protection.
 - English, Russian, and `:help` documentation.
 
-[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.3...HEAD
+[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.4...HEAD
+[0.7.4]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.0...v0.7.1
