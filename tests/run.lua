@@ -411,6 +411,9 @@ assert(rendered:find("➕ " .. date.format(yesterday, "%d.%m.%Y"), 1, true), "cr
 assert(rendered:find("🛫 " .. date.format(today, "%d.%m.%Y"), 1, true), "start date was not formatted")
 assert(rendered:find("📅 " .. date.format(tomorrow, "%d.%m.%Y"), 1, true), "due date was not formatted")
 assert(rendered:find("✅ " .. date.format(today, "%d.%m.%Y"), 1, true), "completion date was not formatted")
+assert(rendered:find("Keys: a add", 1, true), "task view footer must show the create mapping")
+assert(rendered:find("u undo", 1, true), "task view footer must show the undo mapping")
+assert(rendered:find("q/<Esc> close", 1, true), "task view footer must show list mappings")
 
 local highlight_groups = {}
 for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(state.buf, -1, 0, -1, { details = true })) do
@@ -643,6 +646,7 @@ assert_equal(tabs_state.active_repository, 1, "the first repository tab must be 
 local tabs_rendered = table.concat(vim.api.nvim_buf_get_lines(tabs_state.buf, 0, -1, false), "\n")
 assert(tabs_rendered:find("Personal-only", 1, true), "the active repository task is missing")
 assert(not tabs_rendered:find("Frontend-only", 1, true), "an inactive repository task must not be rendered")
+assert(tabs_rendered:find("Keys: a add", 1, true), "repository tabs must show the task-view footer")
 local winbar = vim.wo[tabs_state.win].winbar
 assert(winbar:find("Personal tasks", 1, true), "the first repository alias is missing")
 assert(winbar:find("Frontend tasks", 1, true), "the second repository alias is missing")

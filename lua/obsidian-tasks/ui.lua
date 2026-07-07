@@ -35,6 +35,48 @@ local function add_line(output, line_map, highlights, text, highlight, task)
   end
 end
 
+local function mapping_label(lhs)
+  if type(lhs) == "table" then
+    return table.concat(lhs, "/")
+  end
+  return lhs
+end
+
+local function footer_items(mappings)
+  local items = {
+    { mappings.create_in_view, "add" },
+    { mappings.edit, "edit" },
+    { mappings.toggle, "toggle" },
+    { mappings.delete, "delete" },
+    { mappings.undo, "undo" },
+    { mappings.refresh, "refresh" },
+    { mappings.filter, "filter" },
+    { mappings.cycle_sort, "sort" },
+    { mappings.cycle_status, "status" },
+    { mappings.open_source, "source" },
+    { mappings.close, "close" },
+  }
+  local labels = {}
+  for _, item in ipairs(items) do
+    local lhs = mapping_label(item[1])
+    if lhs then
+      labels[#labels + 1] = lhs .. " " .. item[2]
+    end
+  end
+  return labels
+end
+
+local function add_footer(output, line_map, highlights, state)
+  add_line(output, line_map, highlights, "")
+  add_line(
+    output,
+    line_map,
+    highlights,
+    "Keys: " .. table.concat(footer_items(state.config.mappings), " · "),
+    "Comment"
+  )
+end
+
 local function deadline_bucket(task, today)
   if task.done or not task.due_date then
     return "#on-track"
@@ -191,6 +233,7 @@ local function collect(state)
       end
     end
   end
+  add_footer(output, line_map, highlights, state)
   return output, line_map, highlights, folds
 end
 
