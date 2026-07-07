@@ -641,6 +641,32 @@ assert_equal(tabs_state.active_repository, 2, "next repository mapping did not a
 tabs_rendered = table.concat(vim.api.nvim_buf_get_lines(tabs_state.buf, 0, -1, false), "\n")
 assert(tabs_rendered:find("Frontend-only", 1, true), "the selected repository task is missing")
 assert(not tabs_rendered:find("Personal-only", 1, true), "the previous repository task must not be rendered")
+local command_create_inputs = { "Created by command", "", "" }
+vim.ui.input = function(_, callback) callback(table.remove(command_create_inputs, 1)) end
+vim.ui.select = function(items, options, callback)
+  assert(options.prompt ~= "Repository:", "create command must use the active task-view repository")
+  if options.prompt == "Primary tag:" then
+    callback(select_tag_item(items, "#frontend"))
+  else
+    callback(select_done_item(items))
+  end
+end
+plugin.create()
+vim.ui.input, vim.ui.select = original_input, original_select
+assert(
+  not vim
+    .iter(assert(repository.load({ path = tabs_first })))
+    :any(function(task) return task.text:find("Created by command", 1, true) ~= nil end),
+  "create command used the inactive repository while a task view was open"
+)
+assert(
+  vim
+    .iter(assert(repository.load({ path = tabs_second })))
+    :any(function(task) return task.text:find("Created by command", 1, true) ~= nil end),
+  "create command did not use the active task-view repository"
+)
+local tabs_cursor_task = tabs_state.line_map[vim.api.nvim_win_get_cursor(tabs_state.win)[1]]
+assert(tabs_cursor_task.text:find("Created by command", 1, true), "create command did not focus the new task")
 vim.api.nvim_win_close(tabs_state.win, true)
 
 local folds_temp = vim.fn.tempname() .. ".md"

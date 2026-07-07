@@ -332,6 +332,21 @@ function M.focus_all(target)
   end
 end
 
+function M.current_repository()
+  local win = vim.api.nvim_get_current_win()
+  for _, state in pairs(states) do
+    if state.win == win then
+      if state.active_repository then
+        return state.repositories[state.active_repository]
+      end
+      if #state.repositories == 1 then
+        return state.repositories[1]
+      end
+      return nil
+    end
+  end
+end
+
 function M.select_filter(repositories, callback)
   local items = { { label = "Clear filter", tag = false } }
   local seen = {}

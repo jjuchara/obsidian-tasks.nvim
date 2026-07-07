@@ -383,6 +383,11 @@ function M.create()
     finished = true
     ui.set_task_flow_active(false)
   end
+  local current_repository = ui.current_repository()
+  if current_repository then
+    create_in(current_repository, finish)
+    return
+  end
   select_repository(function(repo)
     if repo then
       create_in(repo, finish)
