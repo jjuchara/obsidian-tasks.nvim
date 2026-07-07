@@ -4,6 +4,20 @@ All notable changes to this project will be documented here.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-07-07
+
+### Added
+
+- Confirmed task deletion from task views with one-step undo for the latest task operation.
+- Task creation can now be started directly from an open task view and focuses the newly created task.
+
+### Fixed
+
+- The additional-tag picker now opens on the input field and defaults Enter to continuing without extra tags.
+- Tag pickers now show footer hotkeys and use Space to toggle tags while Enter continues.
+- Floating task views stay open while task creation prompts are active.
+- Conflicting task-view mappings are now rejected during setup instead of silently overriding earlier mappings.
+
 ## [0.6.0] - 2026-07-07
 
 ### Added
@@ -101,7 +115,8 @@ All notable changes to this project will be documented here.
 - Atomic writes and stale-line protection.
 - English, Russian, and `:help` documentation.
 
-[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.3.0...v0.4.0

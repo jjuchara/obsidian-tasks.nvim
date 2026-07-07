@@ -21,7 +21,6 @@ This document tracks ideas that are intentionally outside the current core relea
 
 - Move tasks between repositories and tag groups.
 - Toggle multiple selected tasks in one operation.
-- Add confirmed deletion and undo for the latest operation.
 - Support task templates and configurable creation workflows.
 
 ## Obsidian integration

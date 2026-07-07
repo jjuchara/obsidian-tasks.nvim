@@ -17,6 +17,44 @@ local function ensure_setup()
   end
 end
 
+local function tag_picker_snacks_options()
+  local function confirm_done(picker)
+    picker.list:view(1)
+    picker:action("confirm")
+  end
+
+  return {
+    focus = "input",
+    actions = {
+      confirm_done = confirm_done,
+      toggle_tag = function(picker, item)
+        if item and item.item and item.item.kind ~= "done" then
+          item.item.toggle = true
+          picker:action("confirm")
+        end
+      end,
+    },
+    win = {
+      input = {
+        footer = "Space toggle tag · Enter continue",
+        footer_pos = "center",
+        keys = {
+          ["<CR>"] = { "confirm_done", mode = { "n", "i" }, desc = "Continue" },
+          ["<Space>"] = { "toggle_tag", mode = { "n", "i" }, desc = "Toggle tag" },
+        },
+      },
+      list = {
+        footer = "Space toggle tag · Enter continue",
+        footer_pos = "center",
+        keys = {
+          ["<CR>"] = "confirm_done",
+          ["<Space>"] = "toggle_tag",
+        },
+      },
+    },
+  }
+end
+
 local function select_repository(callback)
   if #config.repositories == 1 then
     callback(config.repositories[1])
@@ -28,32 +66,86 @@ local function select_repository(callback)
   }, callback)
 end
 
-local function select_primary_tag(repo, callback)
+local function select_primary_tag(repo, callback, on_cancel)
   local tags, error_message = repository.tags(repo)
   if not tags then
     notify(error_message, vim.log.levels.ERROR)
+    if on_cancel then
+      on_cancel()
+    end
     return
   end
   local new_tag = "+ new tag..."
-  tags[#tags + 1] = new_tag
-  vim.ui.select(tags, { prompt = "Primary tag:" }, function(choice)
-    if not choice then
-      return
+  local selected_tag
+  local cursor_index
+  local choose
+  choose = function()
+    local items = { { kind = "done" } }
+    for _, tag in ipairs(tags) do
+      items[#items + 1] = { kind = "tag", tag = tag }
     end
-    if choice ~= new_tag then
-      callback(choice)
-      return
-    end
-    vim.ui.input({ prompt = "New tag (without #): " }, function(input)
-      if input and input ~= "" then
-        local tag = input:sub(1, 1) == "#" and input or ("#" .. input)
-        vim.schedule(function() callback(tag) end)
+    items[#items + 1] = { kind = "new", label = new_tag }
+
+    local select_options = {
+      prompt = "Primary tag:",
+      snacks = tag_picker_snacks_options(),
+      format_item = function(item)
+        if item.kind == "done" then
+          return "Done"
+        end
+        if item.kind == "new" then
+          return item.label
+        end
+        return (selected_tag == item.tag and "[x] " or "[ ] ") .. item.tag
+      end,
+    }
+    if cursor_index then
+      select_options.snacks.on_show = function(picker)
+        for index, item in ipairs(picker:items()) do
+          if item.idx == cursor_index then
+            picker.list:view(index)
+            break
+          end
+        end
       end
+    end
+
+    vim.ui.select(items, select_options, function(choice, index)
+      cursor_index = index or cursor_index
+      if not choice then
+        if on_cancel then
+          on_cancel()
+        end
+        return
+      end
+      if choice.kind == "done" then
+        callback(selected_tag)
+        return
+      end
+      if choice.kind == "tag" then
+        if not choice.toggle then
+          callback(choice.tag)
+          return
+        end
+        selected_tag = selected_tag == choice.tag and nil or choice.tag
+        vim.schedule(choose)
+        return
+      end
+      vim.ui.input({ prompt = "New tag (without #): " }, function(input)
+        if input and input ~= "" then
+          local parsed_tags = parser.parse_tag_input(input)
+          vim.schedule(function() callback(parsed_tags[1]) end)
+        elseif on_cancel then
+          on_cancel()
+        end
+      end)
     end)
-  end)
+  end
+
+  choose()
 end
 
-local function select_additional_tags(repo, primary_tag, callback)
+local function select_additional_tags(repo, primary_tag, callback, on_cancel)
   if not config.creation.prompt_additional_tags then
     callback({})
     return
@@ -62,6 +154,9 @@ local function select_additional_tags(repo, primary_tag, callback)
   local available_tags, error_message = repository.tags(repo)
   if not available_tags then
     notify(error_message, vim.log.levels.ERROR)
+    if on_cancel then
+      on_cancel()
+    end
     return
   end
 
@@ -97,28 +192,18 @@ local function select_additional_tags(repo, primary_tag, callback)
     return chosen
   end
 
-  local cursor_index = 1
+  local cursor_index
   local choose
   choose = function()
-    local items = {}
+    local items = { { kind = "done" } }
     for _, tag in ipairs(tags) do
       items[#items + 1] = { kind = "tag", tag = tag }
     end
     items[#items + 1] = { kind = "new" }
-    items[#items + 1] = { kind = "done" }
 
-    vim.ui.select(items, {
+    local select_options = {
       prompt = ("Additional tags (%d selected):"):format(#result()),
-      snacks = {
-        on_show = function(picker)
-          for index, item in ipairs(picker:items()) do
-            if item.idx == cursor_index then
-              picker.list:view(index)
-              break
-            end
-          end
-        end,
-      },
+      snacks = tag_picker_snacks_options(),
       format_item = function(item)
         if item.kind == "new" then
           return "+ new tag..."
@@ -128,7 +213,19 @@ local function select_additional_tags(repo, primary_tag, callback)
         end
         return (selected[item.tag] and "[x] " or "[ ] ") .. item.tag
       end,
-    }, function(choice, index)
+    }
+    if cursor_index then
+      select_options.snacks.on_show = function(picker)
+        for index, item in ipairs(picker:items()) do
+          if item.idx == cursor_index then
+            picker.list:view(index)
+            break
+          end
+        end
+      end
+    end
+
+    vim.ui.select(items, select_options, function(choice, index)
       cursor_index = index or cursor_index
       if not choice or choice.kind == "done" then
         callback(result())
@@ -146,7 +243,7 @@ local function select_additional_tags(repo, primary_tag, callback)
       vim.ui.input({ prompt = "New additional tag (without #): " }, function(input)
         for _, tag in ipairs(parser.parse_tag_input(input)) do
           add_selected(tag)
-          cursor_index = #tags
+          cursor_index = #tags + 1
         end
         vim.schedule(choose)
       end)
@@ -170,9 +267,12 @@ local function build_task_line(name, tags, start_date, due_date)
   return line
 end
 
-local function prompt_date(prompt, default, allow_empty, callback)
+local function prompt_date(prompt, default, allow_empty, callback, on_cancel)
   vim.ui.input({ prompt = prompt }, function(input)
     if input == nil then
+      if on_cancel then
+        on_cancel()
+      end
       return
     end
     local value = vim.trim(input)
@@ -181,27 +281,36 @@ local function prompt_date(prompt, default, allow_empty, callback)
         callback(default)
       elseif allow_empty then
         callback(nil)
+      elseif on_cancel then
+        on_cancel()
       end
       return
     end
     local normalized, error_message = date.parse(value, nil, config.dates.display_format)
     if not normalized then
       notify(error_message, vim.log.levels.ERROR)
-      prompt_date(prompt, default, allow_empty, callback)
+      prompt_date(prompt, default, allow_empty, callback, on_cancel)
       return
     end
     callback(normalized)
   end)
 end
 
-local function create_in(repo)
+local function create_in(repo, on_finish)
   vim.ui.input({ prompt = "Task: " }, function(name)
     if not name or name == "" then
+      if on_finish then
+        on_finish()
+      end
       return
     end
     select_primary_tag(repo, function(primary_tag)
       select_additional_tags(repo, primary_tag, function(additional_tags)
-        local tags, seen = { primary_tag }, { [primary_tag] = true }
+        local tags, seen = {}, {}
+        if primary_tag then
+          tags[#tags + 1] = primary_tag
+          seen[primary_tag] = true
+        end
         for _, tag in ipairs(additional_tags) do
           if not seen[tag] then
             tags[#tags + 1] = tag
@@ -220,23 +329,34 @@ local function create_in(repo)
           function(start_date)
             prompt_date("Due date [e.g. " .. due_example .. "; empty = no deadline]: ", nil, true, function(due_date)
               local line = build_task_line(name, tags, start_date, due_date)
-              local ok, error_message = repository.append(repo, { line = line, tags = tags })
+              local ok, result = repository.append(repo, { line = line, tags = tags })
               if not ok then
-                notify(error_message, vim.log.levels.ERROR)
+                notify(result, vim.log.levels.ERROR)
+                if on_finish then
+                  on_finish()
+                end
                 return
               end
-              notify("task added to " .. repository_label(repo) .. ": " .. table.concat(tags, " → "))
+              ui.set_undo(result.undo)
+              ui.focus_all(result)
+              local tag_path = #tags > 0 and table.concat(tags, " → ") or "no tags"
+              notify("task added to " .. repository_label(repo) .. ": " .. tag_path)
               ui.refresh_all()
-            end)
-          end
+              if on_finish then
+                on_finish()
+              end
+            end, on_finish)
+          end,
+          on_finish
         )
-      end)
-    end)
+      end, on_finish)
+    end, on_finish)
   end)
 end
 
 function M.setup(options)
   config = config_module.setup(options)
+  ui.set_create_callback(M.create)
   local mappings = config.mappings
   if mappings.open then
     vim.keymap.set("n", mappings.open, M.open, { desc = "Obsidian tasks: open" })
@@ -254,9 +374,20 @@ end
 
 function M.create()
   ensure_setup()
+  ui.set_task_flow_active(true)
+  local finished = false
+  local function finish()
+    if finished then
+      return
+    end
+    finished = true
+    ui.set_task_flow_active(false)
+  end
   select_repository(function(repo)
     if repo then
-      create_in(repo)
+      create_in(repo, finish)
+    else
+      finish()
     end
   end)
 end

@@ -7,6 +7,9 @@ local M = {}
 local namespace = vim.api.nvim_create_namespace("obsidian-tasks")
 local states = {}
 local filter_picker_active = false
+local last_undo
+local create_callback
+local task_flow_active = false
 
 _G.ObsidianTasksFoldText = function() return vim.fn.getline(vim.v.foldstart):gsub("▾ ", "▸ ", 1) end
 
@@ -317,6 +320,18 @@ function M.set_filter_all(tag_filter)
   end
 end
 
+function M.set_undo(undo) last_undo = undo end
+
+function M.set_create_callback(callback) create_callback = callback end
+
+function M.set_task_flow_active(active) task_flow_active = active end
+
+function M.focus_all(target)
+  for _, state in pairs(states) do
+    state.cursor_target = target
+  end
+end
+
 function M.select_filter(repositories, callback)
   local items = { { label = "Clear filter", tag = false } }
   local seen = {}
@@ -366,7 +381,44 @@ local function toggle(state)
     notify(result, vim.log.levels.ERROR)
     return
   end
+  last_undo = result.undo
   state.cursor_target = result
+  M.refresh_all()
+end
+
+local function delete_task(state)
+  local task = current_task(state)
+  if not task then
+    notify("place the cursor on a task", vim.log.levels.WARN)
+    return
+  end
+  local choice = vim.fn.confirm("Delete task?", "&Delete\n&Cancel", 2)
+  if choice ~= 1 then
+    return
+  end
+  local ok, result = repository.delete(task)
+  if not ok then
+    notify(result, vim.log.levels.ERROR)
+    return
+  end
+  last_undo = result
+  notify("task deleted; use undo to restore it")
+  M.refresh_all()
+end
+
+local function undo_latest(state)
+  if not last_undo then
+    notify("nothing to undo", vim.log.levels.WARN)
+    return
+  end
+  local ok, result = repository.undo(last_undo)
+  if not ok then
+    notify(result, vim.log.levels.ERROR)
+    return
+  end
+  last_undo = nil
+  state.cursor_target = result
+  notify("operation undone")
   M.refresh_all()
 end
 
@@ -444,6 +496,7 @@ local function edit(state)
             notify(result, vim.log.levels.ERROR)
             return
           end
+          last_undo = result.undo
           state.cursor_target = result
           notify("task updated")
           M.refresh_all()
@@ -501,8 +554,15 @@ local function configure_buffer(state)
   vim.wo[state.win].foldtext = "v:lua.ObsidianTasksFoldText()"
 
   local mappings = state.config.mappings
+  map(state, mappings.create_in_view, function()
+    if create_callback then
+      create_callback()
+    end
+  end, "Create task")
   map(state, mappings.toggle, function() toggle(state) end, "Toggle task")
   map(state, mappings.edit, function() edit(state) end, "Edit task")
+  map(state, mappings.delete, function() delete_task(state) end, "Delete task")
+  map(state, mappings.undo, function() undo_latest(state) end, "Undo latest task operation")
   map(state, mappings.open_source, function() open_source(state) end, "Open task source")
   map(state, mappings.refresh, function() M.refresh(state) end, "Refresh tasks")
   map(state, mappings.close, function() close(state) end, "Close tasks")
@@ -544,7 +604,7 @@ local function configure_buffer(state)
     vim.api.nvim_create_autocmd("WinLeave", {
       buffer = buf,
       callback = function()
-        if filter_picker_active then
+        if filter_picker_active or task_flow_active then
           return
         end
         vim.schedule(function()

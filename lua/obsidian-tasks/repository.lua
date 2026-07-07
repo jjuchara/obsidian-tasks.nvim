@@ -96,7 +96,8 @@ function M.toggle(task, completion)
     return nil, locate_error
   end
 
-  local line = lines[lnum]
+  local original = lines[lnum]
+  local line = original
   if line:match("^%s*%- %[ %]") then
     line = line:gsub("^(%s*%- )%[ %]", "%1[x]", 1)
     if not line:find(completion.marker, 1, true) then
@@ -115,7 +116,13 @@ function M.toggle(task, completion)
   if not ok then
     return nil, write_error
   end
-  return true, { path = task.path, lnum = lnum }
+  return true,
+    {
+      path = task.path,
+      lnum = lnum,
+      raw = line,
+      undo = { kind = "replace", path = task.path, lnum = lnum, before = original, after = line },
+    }
 end
 
 function M.update(task, updated, options)
@@ -131,12 +138,98 @@ function M.update(task, updated, options)
     return nil, "source line is no longer a task"
   end
 
+  local original = lines[lnum]
   lines[lnum] = build_task_line(task, updated, options)
   local ok, write_error = write_lines(task.path, lines)
   if not ok then
     return nil, write_error
   end
-  return true, { path = task.path, lnum = lnum, raw = lines[lnum] }
+  return true,
+    {
+      path = task.path,
+      lnum = lnum,
+      raw = lines[lnum],
+      undo = { kind = "replace", path = task.path, lnum = lnum, before = original, after = lines[lnum] },
+    }
+end
+
+function M.delete(task)
+  local lines, error_message = read_lines(task.path)
+  if not lines then
+    return nil, error_message
+  end
+  local lnum, locate_error = locate(lines, task)
+  if not lnum then
+    return nil, locate_error
+  end
+  if not lines[lnum]:match("^%s*%- %[[ xX]%]") then
+    return nil, "source line is no longer a task"
+  end
+
+  local undo = { kind = "delete", path = task.path, lnum = lnum, raw = lines[lnum] }
+  table.remove(lines, lnum)
+  local ok, write_error = write_lines(task.path, lines)
+  if not ok then
+    return nil, write_error
+  end
+  return true, undo
+end
+
+function M.restore_deleted(undo)
+  if not undo or undo.kind ~= "delete" then
+    return nil, "nothing to undo"
+  end
+  return M.undo(undo)
+end
+
+function M.undo(undo)
+  if not undo then
+    return nil, "nothing to undo"
+  end
+  local lines, error_message = read_lines(undo.path)
+  if not lines then
+    return nil, error_message
+  end
+
+  if undo.kind == "delete" then
+    for _, line in ipairs(lines) do
+      if line == undo.raw then
+        return nil, "task is already present; refresh the view"
+      end
+    end
+
+    local lnum = math.min(undo.lnum, #lines + 1)
+    table.insert(lines, lnum, undo.raw)
+    local ok, write_error = write_lines(undo.path, lines)
+    if not ok then
+      return nil, write_error
+    end
+    return true, { path = undo.path, lnum = lnum, raw = undo.raw }
+  end
+
+  if undo.kind ~= "create" and undo.kind ~= "replace" then
+    return nil, "nothing to undo"
+  end
+
+  local target = undo.kind == "create" and undo.raw or undo.after
+  local lnum, locate_error = locate(lines, { lnum = undo.lnum, raw = target })
+  if not lnum then
+    return nil, locate_error
+  end
+  if undo.kind == "create" then
+    table.remove(lines, lnum)
+  else
+    lines[lnum] = undo.before
+  end
+
+  local ok, write_error = write_lines(undo.path, lines)
+  if not ok then
+    return nil, write_error
+  end
+  if undo.kind == "create" then
+    return true, { path = undo.path, lnum = math.max(1, math.min(lnum, #lines)) }
+  end
+  return true, { path = undo.path, lnum = lnum, raw = undo.before }
 end
 
 function M.tags(repository)
@@ -181,6 +274,7 @@ function M.append(repository, task)
     end
   end
 
+  local inserted_at
   if not found_heading then
     if #lines > 0 and lines[#lines] ~= "" then
       lines[#lines + 1] = ""
@@ -190,11 +284,23 @@ function M.append(repository, task)
       lines[#lines + 1] = ""
     end
     lines[#lines + 1] = task.line
+    inserted_at = #lines
   else
     table.insert(lines, insert_at + 1, task.line)
+    inserted_at = insert_at + 1
   end
 
-  return write_lines(repository.path, lines)
+  local ok, write_error = write_lines(repository.path, lines)
+  if not ok then
+    return nil, write_error
+  end
+  return true,
+    {
+      path = repository.path,
+      lnum = inserted_at,
+      raw = task.line,
+      undo = { kind = "create", path = repository.path, lnum = inserted_at, raw = task.line },
+    }
 end
 
 return M

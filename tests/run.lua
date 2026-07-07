@@ -2,6 +2,7 @@ local parser = require("obsidian-tasks.parser")
 local date = require("obsidian-tasks.date")
 local grouping = require("obsidian-tasks.grouping")
 local repository = require("obsidian-tasks.repository")
+local config_module = require("obsidian-tasks.config")
 
 local function assert_equal(actual, expected, message)
   if not vim.deep_equal(actual, expected) then
@@ -9,6 +10,25 @@ local function assert_equal(actual, expected, message)
       (message or "values differ") .. "\nactual: " .. vim.inspect(actual) .. "\nexpected: " .. vim.inspect(expected)
     )
   end
+end
+
+local function select_tag_item(items, tag)
+  return vim.iter(items):find(function(item) return item.kind == "tag" and item.tag == tag end)
+end
+
+local function select_done_item(items)
+  return vim.iter(items):find(function(item) return item.kind == "done" end)
+end
+
+local function assert_tag_picker_hotkeys(options, message)
+  assert(options.snacks, message .. " must configure Snacks picker options")
+  assert_equal(options.snacks.focus, "input", message .. " must focus the input")
+  assert(options.snacks.actions.confirm_done, message .. " must define Enter continuation")
+  assert(options.snacks.actions.toggle_tag, message .. " must define Space toggle")
+  assert_equal(options.snacks.win.input.keys["<CR>"][1], "confirm_done", message .. " input Enter mapping is wrong")
+  assert_equal(options.snacks.win.input.keys["<Space>"][1], "toggle_tag", message .. " input Space mapping is wrong")
+  assert_equal(options.snacks.win.list.keys["<CR>"], "confirm_done", message .. " list Enter mapping is wrong")
+  assert_equal(options.snacks.win.list.keys["<Space>"], "toggle_tag", message .. " list Space mapping is wrong")
 end
 
 assert_equal(date.parse(" TODAY ", "2024-02-28"), "2024-02-28", "today alias must be normalized")
@@ -43,6 +63,19 @@ assert_equal(
 
 local temp = vim.fn.tempname() .. ".md"
 local repo = { name = "test", path = temp }
+local ok, error_message = pcall(config_module.setup, {
+  repositories = { repo },
+  mappings = {
+    edit = "<CR>",
+    open_source = "<CR>",
+  },
+})
+assert(not ok, "conflicting task-view mappings must be rejected")
+assert(
+  error_message:find('mappings.open_source conflicts with mappings.edit on "<CR>"', 1, true),
+  "conflicting mapping error is unclear"
+)
+
 vim.fn.writefile({
   "---",
   "tags:",
@@ -78,17 +111,23 @@ assert(tree.children["#work"].children["#frontend"], "nested tag group is missin
 local externally_changed = vim.fn.readfile(temp)
 table.insert(externally_changed, 5, "<!-- external change -->")
 vim.fn.writefile(externally_changed, temp)
-assert(repository.toggle(tasks[1], { marker = "✅", date_format = "%Y-%m-%d" }))
+local completed_ok, completed_result = repository.toggle(tasks[1], { marker = "✅", date_format = "%Y-%m-%d" })
+assert(completed_ok)
 local toggled = parser.parse_lines(vim.fn.readfile(temp), repo)
 assert(toggled[1].done, "active task was not completed")
 assert(toggled[1].completion_date, "completion date was not added")
+assert(repository.undo(completed_result.undo), "toggle undo failed")
+local toggle_undone = parser.parse_lines(vim.fn.readfile(temp), repo)
+assert(not toggle_undone[1].done, "toggle undo did not reopen the task")
 
-assert(repository.toggle(toggled[1], { marker = "✅", date_format = "%Y-%m-%d" }))
+assert(repository.toggle(toggle_undone[1], { marker = "✅", date_format = "%Y-%m-%d" }))
+local toggled_again = parser.parse_lines(vim.fn.readfile(temp), repo)
+assert(repository.toggle(toggled_again[1], { marker = "✅", date_format = "%Y-%m-%d" }))
 local reopened = parser.parse_lines(vim.fn.readfile(temp), repo)
 assert(not reopened[1].done, "completed task was not reopened")
 assert(not reopened[1].completion_date, "completion date was not removed")
 
-assert(repository.update(reopened[1], {
+local update_ok, update_result = repository.update(reopened[1], {
   text = "Updated first",
   tags = { "#work", "#frontend", "#urgent", "#review" },
   start_date = "2026-07-03",
@@ -96,7 +135,8 @@ assert(repository.update(reopened[1], {
 }, {
   completion_marker = "✅",
   infinity_marker = "♾️",
-}))
+})
+assert(update_ok)
 local updated = parser.parse_lines(vim.fn.readfile(temp), repo)
 assert_equal(updated[1].text, "Updated first #work #frontend #urgent #review ➕ 2026-07-01 🛫 2026-07-03 ♾️")
 assert_equal(updated[1].tags, { "#work", "#frontend", "#urgent", "#review" }, "updated task tags were not persisted")
@@ -107,14 +147,47 @@ assert_equal(
   "Updated first",
   "task text cleanup must remove tags and date markers"
 )
+assert(repository.undo(update_result.undo), "update undo failed")
+local update_undone = parser.parse_lines(vim.fn.readfile(temp), repo)
+assert_equal(update_undone[1].text, reopened[1].text, "update undo did not restore the original task")
+assert(repository.update(update_undone[1], {
+  text = "Updated first",
+  tags = { "#work", "#frontend", "#urgent", "#review" },
+  start_date = "2026-07-03",
+  due_date = nil,
+}, {
+  completion_marker = "✅",
+  infinity_marker = "♾️",
+}))
+updated = parser.parse_lines(vim.fn.readfile(temp), repo)
 
+local ok, delete_undo = repository.delete(updated[1])
+assert(ok, "task deletion failed")
+local after_delete = parser.parse_lines(vim.fn.readfile(temp), repo)
+assert_equal(#after_delete, 1, "deleted task is still present")
+assert(after_delete[1].text:find("Second", 1, true), "task deletion removed the wrong line")
+local restored_ok = repository.restore_deleted(delete_undo)
+assert(restored_ok, "deleted task was not restored")
+local after_restore = parser.parse_lines(vim.fn.readfile(temp), repo)
+assert_equal(#after_restore, 2, "restored task is missing")
+assert_equal(after_restore[1].text, updated[1].text, "restored task content changed")
+assert(not repository.restore_deleted(delete_undo), "restoring an already-present task must fail")
+
+local append_ok, append_result = repository.append(repo, {
+  tags = { "#personal", "#urgent" },
+  line = "- [ ] Third #personal #urgent ➕ 2026-07-02 ♾️",
+})
+assert(append_ok)
+local final = parser.parse_lines(vim.fn.readfile(temp), repo)
+assert_equal(#final, 3, "appended task is missing")
+assert_equal(final[3].tags, { "#personal", "#urgent" })
+assert(repository.undo(append_result.undo), "append undo failed")
+local append_undone = parser.parse_lines(vim.fn.readfile(temp), repo)
+assert_equal(#append_undone, 2, "append undo did not remove the created task")
 assert(repository.append(repo, {
   tags = { "#personal", "#urgent" },
   line = "- [ ] Third #personal #urgent ➕ 2026-07-02 ♾️",
 }))
-local final = parser.parse_lines(vim.fn.readfile(temp), repo)
-assert_equal(#final, 3, "appended task is missing")
-assert_equal(final[3].tags, { "#personal", "#urgent" })
 
 local plugin = require("obsidian-tasks")
 plugin.setup({ repositories = { repo } })
@@ -130,21 +203,30 @@ end
 local additional_actions = { "#frontend", "#urgent", "new", "done" }
 local visible_additional_tags = {}
 local restored_additional_tag_cursors = {}
+local initial_additional_tag_picker_kept_default_focus = false
+local initial_additional_tag_picker_defaulted_to_done = false
 vim.ui.select = function(items, options, callback)
   if options.prompt == "Primary tag:" then
-    callback("#work")
+    assert_tag_picker_hotkeys(options, "primary-tag picker")
+    callback(select_tag_item(items, "#work"))
     return
   end
 
+  assert_tag_picker_hotkeys(options, "additional-tag picker")
   vim.list_extend(visible_additional_tags, vim.tbl_map(options.format_item, items))
-  options.snacks.on_show({
-    items = function()
-      return vim.tbl_map(function(index) return { idx = index } end, vim.fn.range(1, #items))
-    end,
-    list = {
-      view = function(_, index) restored_additional_tag_cursors[#restored_additional_tag_cursors + 1] = index end,
-    },
-  })
+  if options.snacks and options.snacks.on_show then
+    options.snacks.on_show({
+      items = function()
+        return vim.tbl_map(function(index) return { idx = index } end, vim.fn.range(1, #items))
+      end,
+      list = {
+        view = function(_, index) restored_additional_tag_cursors[#restored_additional_tag_cursors + 1] = index end,
+      },
+    })
+  else
+    initial_additional_tag_picker_kept_default_focus = options.snacks and options.snacks.focus == "input"
+    initial_additional_tag_picker_defaulted_to_done = items[1] and items[1].kind == "done"
+  end
   local action = table.remove(additional_actions, 1)
   local selected_index, selected_item = vim.iter(items):enumerate():find(
     function(_, candidate) return candidate.kind == action or candidate.tag == action end
@@ -174,6 +256,8 @@ assert(vim.tbl_contains(visible_additional_tags, "[ ] #frontend"), "existing add
 assert(vim.tbl_contains(visible_additional_tags, "[x] #frontend"), "selected additional tags must be highlighted")
 assert(vim.tbl_contains(visible_additional_tags, "+ new tag..."), "the additional-tag list must offer a new tag")
 assert(vim.tbl_contains(visible_additional_tags, "Done"), "the additional-tag list must offer completion")
+assert(initial_additional_tag_picker_kept_default_focus, "the initial additional-tag picker must focus the input field")
+assert(initial_additional_tag_picker_defaulted_to_done, "the initial additional-tag picker must default Enter to Done")
 assert(
   vim.iter(restored_additional_tag_cursors):any(function(index) return index > 1 end),
   "the additional-tag picker must restore the cursor after toggling a lower tag"
@@ -197,9 +281,9 @@ vim.ui.input = function(options, callback)
 end
 vim.ui.select = function(items, options, callback)
   if options.prompt == "Primary tag:" then
-    callback("#work")
+    callback(select_tag_item(items, "#work"))
   else
-    callback(items[#items])
+    callback(select_done_item(items))
   end
 end
 plugin.create()
@@ -226,7 +310,13 @@ plugin.setup({
 })
 local new_tag_input_active = false
 vim.ui.select = function(items, options, callback)
-  callback(options.prompt == "Repository:" and items[2] or items[#items])
+  if options.prompt == "Repository:" then
+    callback(items[2])
+  elseif options.prompt == "Primary tag:" then
+    callback(items[#items])
+  else
+    callback(select_done_item(items))
+  end
 end
 vim.ui.input = function(options, callback)
   if options.prompt == "Task: " then
@@ -255,6 +345,24 @@ assert(
     :any(function(task) return task.text:find("Created with a new primary tag", 1, true) ~= nil end),
   "task with a new primary tag must be written only to the selected repository"
 )
+
+local no_tag_temp = vim.fn.tempname() .. ".md"
+local no_tag_repo = { name = "no-tag-test", path = no_tag_temp }
+vim.fn.writefile({ "# Tasks" }, no_tag_temp)
+plugin.setup({ repositories = { no_tag_repo } })
+local no_tag_inputs = { "Created without tags", "", "" }
+vim.ui.input = function(_, callback) callback(table.remove(no_tag_inputs, 1)) end
+vim.ui.select = function(items, options, callback)
+  assert(options.prompt == "Primary tag:" or options.prompt:find("Additional tags", 1, true))
+  callback(select_done_item(items))
+end
+plugin.create()
+vim.ui.input, vim.ui.select = original_input, original_select
+local no_tag_task = vim
+  .iter(assert(repository.load(no_tag_repo)))
+  :find(function(task) return task.text:find("Created without tags", 1, true) ~= nil end)
+assert(no_tag_task, "task creation without tags is missing")
+assert_equal(no_tag_task.tags, {}, "continuing without a selected primary tag must create a tagless task")
 
 local view_temp = vim.fn.tempname() .. ".md"
 local view_repo = { name = "view-test", path = view_temp }
@@ -396,6 +504,93 @@ assert_equal(edited_task.start_date, yesterday, "edit flow did not persist the s
 assert_equal(edited_task.due_date, nil, "edit flow did not clear the due date")
 assert(edited_task.text:find("♾️", 1, true), "edit flow did not persist the no-deadline marker")
 
+local create_task, delete_task, undo_latest
+for _, mapping in ipairs(vim.api.nvim_buf_get_keymap(state.buf, "n")) do
+  if mapping.desc == "Create task" then
+    create_task = mapping.callback
+  elseif mapping.desc == "Delete task" then
+    delete_task = mapping.callback
+  elseif mapping.desc == "Undo latest task operation" then
+    undo_latest = mapping.callback
+  end
+end
+assert(create_task, "create mapping is missing")
+assert(delete_task, "delete mapping is missing")
+assert(undo_latest, "undo mapping is missing")
+undo_latest()
+assert(
+  not vim
+    .iter(assert(repository.load(view_repo)))
+    :any(function(task) return task.text:find("Renamed task", 1, true) ~= nil end),
+  "undo did not revert the edited task"
+)
+assert(
+  vim.iter(assert(repository.load(view_repo))):any(function(task) return task.text:find("Zulu", 1, true) ~= nil end),
+  "undo did not restore the original task text"
+)
+
+for line, task in pairs(state.line_map) do
+  if task.text:find("Zulu", 1, true) then
+    vim.api.nvim_win_set_cursor(state.win, { line, 0 })
+    break
+  end
+end
+edit_inputs = { "Renamed task", "#personal #urgent", "yesterday", "" }
+vim.ui.input = function(_, callback) callback(table.remove(edit_inputs, 1)) end
+edit_task()
+vim.ui.input = original_input
+for line, task in pairs(state.line_map) do
+  if task.text:find("Renamed task", 1, true) then
+    vim.api.nvim_win_set_cursor(state.win, { line, 0 })
+    break
+  end
+end
+local original_confirm = vim.fn.confirm
+vim.fn.confirm = function() return 1 end
+delete_task()
+vim.fn.confirm = original_confirm
+assert(
+  not vim
+    .iter(assert(repository.load(view_repo)))
+    :any(function(task) return task.text:find("Renamed task", 1, true) ~= nil end),
+  "confirmed task deletion did not remove the task"
+)
+undo_latest()
+assert(
+  vim
+    .iter(assert(repository.load(view_repo)))
+    :any(function(task) return task.text:find("Renamed task", 1, true) ~= nil end),
+  "undo did not restore the deleted task"
+)
+
+local create_inputs = { "Created then undone", "", "" }
+vim.ui.input = function(_, callback) callback(table.remove(create_inputs, 1)) end
+vim.ui.select = function(items, options, callback)
+  if options.prompt == "Primary tag:" then
+    callback(select_tag_item(items, "#work"))
+  else
+    callback(select_done_item(items))
+  end
+end
+create_task()
+vim.ui.input, vim.ui.select = original_input, original_select
+assert(
+  vim.wait(1000, function()
+    return vim
+      .iter(assert(repository.load(view_repo)))
+      :any(function(task) return task.text:find("Created then undone", 1, true) ~= nil end)
+  end),
+  "task created from the task view is missing"
+)
+assert(vim.api.nvim_win_is_valid(state.win), "creating from the task view closed the task view")
+undo_latest()
+assert(
+  not vim
+    .iter(assert(repository.load(view_repo)))
+    :any(function(task) return task.text:find("Created then undone", 1, true) ~= nil end),
+  "undo did not remove the created task"
+)
+
 local open_source_task
 for _, mapping in ipairs(vim.api.nvim_buf_get_keymap(state.buf, "n")) do
   if mapping.desc == "Open task source" then
@@ -526,6 +721,59 @@ assert(vim.api.nvim_buf_is_valid(float_state.buf), "filter picker closed the flo
 assert(vim.api.nvim_win_is_valid(float_state.win), "filter picker closed the floating task window")
 assert_equal(float_state.tag_filter, "#work", "floating task view did not apply the selected filter")
 assert_equal(vim.api.nvim_get_current_win(), float_state.win, "filter picker did not return to the task view")
+
+local float_create_task
+for _, mapping in ipairs(vim.api.nvim_buf_get_keymap(float_state.buf, "n")) do
+  if mapping.desc == "Create task" then
+    float_create_task = mapping.callback
+    break
+  end
+end
+assert(float_create_task, "floating task view create mapping is missing")
+
+local function with_prompt_window(callback)
+  local prompt_buf = vim.api.nvim_create_buf(false, true)
+  local prompt_win = vim.api.nvim_open_win(prompt_buf, true, {
+    relative = "editor",
+    row = 2,
+    col = 2,
+    width = 30,
+    height = 3,
+    style = "minimal",
+  })
+  callback()
+  if vim.api.nvim_win_is_valid(prompt_win) then
+    vim.api.nvim_win_close(prompt_win, true)
+  end
+end
+
+local float_create_inputs = { "Created in float", "", "" }
+vim.ui.input = function(_, callback)
+  with_prompt_window(function() callback(table.remove(float_create_inputs, 1)) end)
+end
+vim.ui.select = function(items, options, callback)
+  with_prompt_window(function()
+    if options.prompt == "Primary tag:" then
+      callback(select_tag_item(items, "#work"))
+    else
+      callback(select_done_item(items))
+    end
+  end)
+end
+float_create_task()
+vim.ui.input, vim.ui.select = original_input, original_select
+assert(
+  vim.wait(1000, function()
+    return vim
+      .iter(assert(repository.load(view_repo)))
+      :any(function(task) return task.text:find("Created in float", 1, true) ~= nil end)
+  end),
+  "task created from the floating task view is missing"
+)
+assert(vim.api.nvim_buf_is_valid(float_state.buf), "creating from the floating task view closed the buffer")
+assert(vim.api.nvim_win_is_valid(float_state.win), "creating from the floating task view closed the window")
+local float_cursor_task = float_state.line_map[vim.api.nvim_win_get_cursor(float_state.win)[1]]
+assert(float_cursor_task.text:find("Created in float", 1, true), "created task was not focused")
 vim.api.nvim_win_close(float_state.win, true)
 
 vim.cmd.runtime("plugin/obsidian-tasks.lua")
@@ -536,6 +784,7 @@ assert_equal(state.sort, "source", "sort command did not update open views")
 
 vim.uv.fs_unlink(temp)
 vim.uv.fs_unlink(new_tag_temp)
+vim.uv.fs_unlink(no_tag_temp)
 vim.uv.fs_unlink(view_temp)
 vim.uv.fs_unlink(tabs_first)
 vim.uv.fs_unlink(tabs_second)

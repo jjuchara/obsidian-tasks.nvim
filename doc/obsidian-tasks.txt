@@ -56,8 +56,10 @@ COMMANDS                                                *obsidian-tasks-commands
                                                *:ObsidianTasksCreate*
 :ObsidianTasksCreate        Start the guided task creation flow.
                             Additional tags are selected from the existing-tag
-                            list. Choose tags to toggle them, use `+ new
-                            tag...` to add one, and choose `Done` to continue.
+                            list. Press Enter immediately to continue without
+                            extra tags, press Space to toggle tags, or use `+
+                            new tag...` to add one. The primary-tag picker
+                            also accepts Enter with no selected tag.
 
                                               *:ObsidianTasksRefresh*
 :ObsidianTasksRefresh       Reload all open task views from disk.
@@ -75,8 +77,11 @@ TASK VIEW                                              *obsidian-tasks-task-view
 
 Default mappings inside a task view:
 
+  a          Create a task without leaving the task view.
   <Space>    Toggle the task and its completion date.
   <CR>       Edit task text, tags, start date, and due date.
+  d          Delete the task after confirmation.
+  u          Undo the latest task operation.
   gf         Open the source Markdown at the task line.
   s          Cycle active, done, and all statuses.
   o          Cycle source, deadline, and title sorting.
@@ -92,11 +97,15 @@ Default mappings inside a task view:
 
 Floating views close when focus moves to another window by default. Set
 `view.close_on_leave` to false to keep them open.
+Task-view mappings must be unique. For example, do not assign both `edit` and
+`open_source` to <CR>.
 Tag filters match any tag on a task, apply to every open task view, and remain
 active when views are refreshed.
 Tag groups use native Neovim folds and a fold column. Expanded and collapsed
 groups remain in the same state across refreshes, sorting, filtering, and
 repository navigation.
+When task creation starts from an open task view, the view stays open and the
+newly created task is focused after refresh.
 
 =============================================================================
 MARKDOWN FORMAT                                            *obsidian-tasks-format*
@@ -148,8 +157,11 @@ The complete defaults are: >lua
     mappings = {
       open = nil,
       create = nil,
+      create_in_view = "a",
       toggle = "<Space>",
       edit = "<CR>",
+      delete = "d",
+      undo = "u",
       open_source = "gf",
       refresh = "r",
       close = { "q", "<Esc>" },
@@ -181,6 +193,9 @@ source Markdown. Incomplete tasks due today or tomorrow use
 Editing a task from the task view rewrites the Markdown task line while
 preserving the checkbox state, creation date, and completion date. Clearing the
 due date writes the configured no-deadline marker.
+Deleting a task asks for confirmation first. The latest successful task
+toggle, edit, deletion, or creation can be undone with the undo mapping while
+the source line still matches the expected post-operation state.
 
 Deadline sorting adds virtual `#overdue`, `#due-soon`, and `#on-track` groups.
 Due-soon covers today and tomorrow. Later deadlines, completed tasks, and

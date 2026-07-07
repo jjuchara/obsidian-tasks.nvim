@@ -120,8 +120,11 @@ require("obsidian-tasks").setup({
   mappings = {
     open = "<leader>to",           -- global mapping, nil disables it
     create = "<leader>ta",         -- global mapping, nil disables it
+    create_in_view = "a",
     toggle = "<Space>",
     edit = "<CR>",
+    delete = "d",
+    undo = "u",
     open_source = "gf",
     refresh = "r",
     close = { "q", "<Esc>" },
@@ -150,8 +153,11 @@ require("obsidian-tasks").setup({
 
 | Key | Action |
 |---|---|
+| `a` | Create a task without leaving the task view |
 | `<Space>` | Toggle the task under the cursor |
 | `<CR>` | Edit task text, tags, start date, and deadline |
+| `d` | Delete the task under the cursor after confirmation |
+| `u` | Undo the latest task operation |
 | `gf` | Open the Markdown source at the task line |
 | `s` | Cycle `active → done → all` |
 | `o` | Cycle `source → deadline → title` sorting |
@@ -161,6 +167,7 @@ require("obsidian-tasks").setup({
 | `q`, `<Esc>` | Close the view |
 
 A floating view is modal by default: clicking another window closes it. Set `view.close_on_leave = false` if you prefer a persistent float.
+Task-view mappings must be unique. For example, do not assign both `edit` and `open_source` to `<CR>`.
 Tag filtering matches any tag on a task, remains active after refresh, and applies to every open task view.
 Tag groups use native Neovim folds and expose a fold column for mouse interaction. Their expanded and collapsed states are preserved across refreshes, sorting, filtering, and repository navigation. Set `view.fold_level = 0` to start with top-level groups collapsed, or use a larger depth to reveal initial levels.
 
@@ -168,11 +175,12 @@ Tag groups use native Neovim folds and expose a fold column for mouse interactio
 
 1. Select a repository when more than one is configured.
 2. Enter the task text.
-3. Select or create the primary tag.
-4. Choose any number of additional tags from the existing-tag list. Selected tags are marked with `[x]`; use `+ new tag...` to add and select a new tag, then choose `Done`.
+3. Select or create the primary tag, or press Enter immediately to continue without one.
+4. Choose any number of additional tags from the existing-tag list. Press Enter to continue, or press Space to toggle the tag under the cursor. Selected tags are marked with `[x]`; use `+ new tag...` to add and select a new tag.
 5. Confirm the start date and optional deadline. Enter `yesterday`, `today`, `tomorrow`, an ISO date such as `2026-07-10`, or a date matching `dates.display_format`. Leading zeroes are optional, so `7.3.2026` is accepted for `%d.%m.%Y`.
 
 The completion notification shows the persisted tag path, for example `#work → #gantt`.
+When task creation starts from an open task view, the view stays open and the newly created task is focused after refresh.
 Dates are always stored as `YYYY-MM-DD`. `dates.display_format` changes rendered dates and the examples shown in creation prompts without modifying Markdown. Active tasks due today or tomorrow use `ObsidianTasksDueSoon`; overdue tasks use `ObsidianTasksOverdue`.
 Deadline sorting adds virtual `#overdue`, `#due-soon`, and `#on-track` groups. `#due-soon` covers today and tomorrow; later deadlines, completed tasks, and tasks without deadlines are `#on-track`.
 

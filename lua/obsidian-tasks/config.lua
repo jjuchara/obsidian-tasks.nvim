@@ -30,8 +30,11 @@ M.defaults = {
   mappings = {
     open = nil,
     create = nil,
+    create_in_view = "a",
     toggle = "<Space>",
     edit = "<CR>",
+    delete = "d",
+    undo = "u",
     open_source = "gf",
     refresh = "r",
     close = { "q", "<Esc>" },
@@ -61,6 +64,48 @@ local function normalize_repository(repository, index)
   repo.path = vim.fs.normalize(vim.fn.expand(repo.path))
   repo.vault = repo.vault and vim.fs.normalize(vim.fn.expand(repo.vault)) or vim.fs.dirname(repo.path)
   return repo
+end
+
+local task_view_mappings = {
+  "create_in_view",
+  "toggle",
+  "edit",
+  "delete",
+  "undo",
+  "open_source",
+  "refresh",
+  "close",
+  "cycle_status",
+  "cycle_sort",
+  "filter",
+  "next_repository",
+  "previous_repository",
+}
+
+local function validate_mapping_value(name, lhs, seen)
+  if lhs == nil then
+    return
+  end
+  if type(lhs) == "table" then
+    for _, key in ipairs(lhs) do
+      validate_mapping_value(name, key, seen)
+    end
+    return
+  end
+  if type(lhs) ~= "string" or lhs == "" then
+    fail(("mappings.%s must be a non-empty string, a list of strings, or nil"):format(name))
+  end
+  if seen[lhs] then
+    fail(("mappings.%s conflicts with mappings.%s on %q"):format(name, seen[lhs], lhs))
+  end
+  seen[lhs] = name
+end
+
+local function validate_task_view_mappings(mappings)
+  local seen = {}
+  for _, name in ipairs(task_view_mappings) do
+    validate_mapping_value(name, mappings[name], seen)
+  end
 end
 
 function M.setup(options)
@@ -96,6 +141,7 @@ function M.setup(options)
   if not valid_format then
     fail("dates.display_format is not a valid strftime format")
   end
+  validate_task_view_mappings(config.mappings)
 
   local names = {}
   for index, repository in ipairs(config.repositories) do
