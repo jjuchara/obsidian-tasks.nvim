@@ -4,6 +4,13 @@ All notable changes to this project will be documented here.
 
 ## [Unreleased]
 
+## [0.7.6] - 2026-07-07
+
+### Changed
+
+- Floating task views now show hotkeys in the native window footer instead of rendering them as buffer content.
+- Tag pickers now keep hotkey hints only in picker footers, avoiding duplicated prompt and list text.
+
 ## [0.7.5] - 2026-07-07
 
 ### Added
@@ -145,7 +152,8 @@ All notable changes to this project will be documented here.
 - Atomic writes and stale-line protection.
 - English, Russian, and `:help` documentation.
 
-[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.5...HEAD
+[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.6...HEAD
+[0.7.6]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.4...v0.7.5
 [0.7.4]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.2...v0.7.3

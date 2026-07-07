@@ -42,7 +42,7 @@ local function mapping_label(lhs)
   return lhs
 end
 
-local function footer_items(mappings)
+local function footer_text(mappings)
   local items = {
     { mappings.create_in_view, "add" },
     { mappings.edit, "edit" },
@@ -63,18 +63,7 @@ local function footer_items(mappings)
       labels[#labels + 1] = lhs .. " " .. item[2]
     end
   end
-  return labels
-end
-
-local function add_footer(output, line_map, highlights, state)
-  add_line(output, line_map, highlights, "")
-  add_line(
-    output,
-    line_map,
-    highlights,
-    "Keys: " .. table.concat(footer_items(state.config.mappings), " · "),
-    "Comment"
-  )
+  return table.concat(labels, "  ")
 end
 
 local function deadline_bucket(task, today)
@@ -233,7 +222,6 @@ local function collect(state)
       end
     end
   end
-  add_footer(output, line_map, highlights, state)
   return output, line_map, highlights, folds
 end
 
@@ -681,6 +669,7 @@ local function open_window(config)
   if config.view.type == "float" then
     local width = math.max(20, math.floor(vim.o.columns * config.view.width))
     local height = math.max(5, math.floor(vim.o.lines * config.view.height))
+    local footer = footer_text(config.mappings)
     win = vim.api.nvim_open_win(buf, true, {
       relative = "editor",
       row = math.floor((vim.o.lines - height) / 2),
@@ -691,6 +680,8 @@ local function open_window(config)
       border = config.view.border,
       title = config.view.title,
       title_pos = "center",
+      footer = footer ~= "" and (" " .. footer .. " ") or nil,
+      footer_pos = "center",
     })
   else
     vim.cmd(config.view.window_command)

@@ -28,15 +28,29 @@ local function is_primary_tag_prompt(prompt) return prompt:find("Primary tag:", 
 
 local function is_additional_tags_prompt(prompt) return prompt:find("Additional tags", 1, true) ~= nil end
 
+local function chunks_text(value)
+  if type(value) == "string" then
+    return value
+  end
+  local parts = {}
+  for _, chunk in ipairs(value or {}) do
+    parts[#parts + 1] = type(chunk) == "table" and chunk[1] or chunk
+  end
+  return table.concat(parts)
+end
+
 local function assert_tag_picker_hotkeys(options, message)
-  assert(
-    options.prompt:find("Space toggle tag", 1, true) and options.prompt:find("Enter continue", 1, true),
-    message .. " prompt must include hotkey hints"
-  )
+  assert(not options.prompt:find("Space toggle tag", 1, true), message .. " prompt must not duplicate hotkey hints")
   assert(options.snacks, message .. " must configure Snacks picker options")
   assert_equal(options.snacks.focus, "input", message .. " must focus the input")
   assert(options.snacks.actions.confirm_done, message .. " must define Enter continuation")
   assert(options.snacks.actions.toggle_tag, message .. " must define Space toggle")
+  assert_equal(
+    options.snacks.win.input.footer,
+    "Space toggle tag · Enter continue",
+    message .. " input footer is wrong"
+  )
+  assert_equal(options.snacks.win.list.footer, "Space toggle tag · Enter continue", message .. " list footer is wrong")
   assert_equal(options.snacks.win.input.keys["<CR>"][1], "confirm_done", message .. " input Enter mapping is wrong")
   assert_equal(options.snacks.win.input.keys["<Space>"][1], "toggle_tag", message .. " input Space mapping is wrong")
   assert_equal(options.snacks.win.list.keys["<CR>"], "confirm_done", message .. " list Enter mapping is wrong")
@@ -269,8 +283,8 @@ assert(vim.tbl_contains(visible_additional_tags, "[x] #frontend"), "selected add
 assert(vim.tbl_contains(visible_additional_tags, "+ new tag..."), "the additional-tag list must offer a new tag")
 assert(vim.tbl_contains(visible_additional_tags, "Done"), "the additional-tag list must offer completion")
 assert(
-  vim.tbl_contains(visible_additional_tags, "Hotkeys: Space toggle tag · Enter continue"),
-  "the additional-tag list must show hotkey hints"
+  not vim.tbl_contains(visible_additional_tags, "Hotkeys: Space toggle tag · Enter continue"),
+  "additional-tag hotkey hints must not be duplicated as list items"
 )
 assert(initial_additional_tag_picker_kept_default_focus, "the initial additional-tag picker must focus the input field")
 assert(initial_additional_tag_picker_defaulted_to_done, "the initial additional-tag picker must default Enter to Done")
@@ -411,9 +425,7 @@ assert(rendered:find("➕ " .. date.format(yesterday, "%d.%m.%Y"), 1, true), "cr
 assert(rendered:find("🛫 " .. date.format(today, "%d.%m.%Y"), 1, true), "start date was not formatted")
 assert(rendered:find("📅 " .. date.format(tomorrow, "%d.%m.%Y"), 1, true), "due date was not formatted")
 assert(rendered:find("✅ " .. date.format(today, "%d.%m.%Y"), 1, true), "completion date was not formatted")
-assert(rendered:find("Keys: a add", 1, true), "task view footer must show the create mapping")
-assert(rendered:find("u undo", 1, true), "task view footer must show the undo mapping")
-assert(rendered:find("q/<Esc> close", 1, true), "task view footer must show list mappings")
+assert(not rendered:find("Keys:", 1, true), "native task-view footers must not be rendered as buffer lines")
 
 local highlight_groups = {}
 for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(state.buf, -1, 0, -1, { details = true })) do
@@ -646,7 +658,6 @@ assert_equal(tabs_state.active_repository, 1, "the first repository tab must be 
 local tabs_rendered = table.concat(vim.api.nvim_buf_get_lines(tabs_state.buf, 0, -1, false), "\n")
 assert(tabs_rendered:find("Personal-only", 1, true), "the active repository task is missing")
 assert(not tabs_rendered:find("Frontend-only", 1, true), "an inactive repository task must not be rendered")
-assert(tabs_rendered:find("Keys: a add", 1, true), "repository tabs must show the task-view footer")
 local winbar = vim.wo[tabs_state.win].winbar
 assert(winbar:find("Personal tasks", 1, true), "the first repository alias is missing")
 assert(winbar:find("Frontend tasks", 1, true), "the second repository alias is missing")
@@ -750,6 +761,11 @@ plugin.setup({
   view = { type = "float", close_on_leave = true, status = "all" },
 })
 local float_state = plugin.open()
+local float_config = vim.api.nvim_win_get_config(float_state.win)
+local float_footer = chunks_text(float_config.footer)
+assert(float_footer:find("a add", 1, true), "floating task view footer must show the create mapping")
+assert(float_footer:find("u undo", 1, true), "floating task view footer must show the undo mapping")
+assert(float_footer:find("q/<Esc> close", 1, true), "floating task view footer must show list mappings")
 local original_float_select = vim.ui.select
 vim.ui.select = function(items, _, callback)
   local picker_buf = vim.api.nvim_create_buf(false, true)
