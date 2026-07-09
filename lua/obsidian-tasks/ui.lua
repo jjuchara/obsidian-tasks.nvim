@@ -723,7 +723,9 @@ local function open_window(config)
     vim.api.nvim_win_set_buf(win, buf)
   end
   vim.wo[win].cursorline = true
-  vim.wo[win].wrap = false
+  vim.wo[win].wrap = true
+  vim.wo[win].linebreak = true
+  vim.wo[win].breakindent = true
   return buf, win
 end
 

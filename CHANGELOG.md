@@ -4,6 +4,12 @@ All notable changes to this project will be documented here.
 
 ## [Unreleased]
 
+## [0.7.8] - 2026-07-09
+
+### Fixed
+
+- Long task lines now wrap inside task views instead of running past the window edge.
+
 ## [0.7.7] - 2026-07-07
 
 ### Fixed

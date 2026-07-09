@@ -455,6 +455,9 @@ assert(rendered:find("🛫 " .. date.format(today, "%d.%m.%Y"), 1, true), "start
 assert(rendered:find("📅 " .. date.format(tomorrow, "%d.%m.%Y"), 1, true), "due date was not formatted")
 assert(rendered:find("✅ " .. date.format(today, "%d.%m.%Y"), 1, true), "completion date was not formatted")
 assert(not rendered:find("Keys:", 1, true), "native task-view footers must not be rendered as buffer lines")
+assert_equal(vim.wo[state.win].wrap, true, "task view must wrap long task lines")
+assert_equal(vim.wo[state.win].linebreak, true, "task view must wrap long tasks at word boundaries")
+assert_equal(vim.wo[state.win].breakindent, true, "wrapped task lines must keep readable indentation")
 
 local highlight_groups = {}
 for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(state.buf, -1, 0, -1, { details = true })) do
