@@ -4,6 +4,20 @@ All notable changes to this project will be documented here.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-07-23
+
+### Added
+
+- Optional per-repository source globs for collecting tasks from many Markdown files while keeping one writable creation target.
+- View-only source and project tags for Dataview-style PARA grouping and filtering without executing Dataview or rewriting source tasks.
+
+### Documentation
+
+- Added a durable project decision log and established the Russian Obsidian project as the source of truth for project knowledge.
+- Added canonical Russian product, design, and manual-testing documents to the Obsidian project.
+- Expanded the README and Vim help to cover the current editing, deletion, undo, filtering, sorting, and folding workflows.
+- Limited English repository documentation to code-adjacent and release-facing projections of the canonical Russian project documentation.
+
 ## [0.7.8] - 2026-07-09
 
 ### Fixed
@@ -166,7 +180,9 @@ All notable changes to this project will be documented here.
 - Atomic writes and stale-line protection.
 - English, Russian, and `:help` documentation.
 
-[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.7...HEAD
+[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.8...v0.8.0
+[0.7.8]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.7...v0.7.8
 [0.7.7]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.4...v0.7.5

@@ -5,7 +5,8 @@ local function node(name) return { name = name, order = {}, children = {}, tasks
 function M.group(tasks, untagged_label)
   local root = node(nil)
   for _, task in ipairs(tasks) do
-    local tags = #task.tags > 0 and task.tags or { untagged_label or "Без тегов" }
+    local task_tags = task.view_tags or task.tags
+    local tags = #task_tags > 0 and task_tags or { untagged_label or "Без тегов" }
     local current = root
     for _, tag in ipairs(tags) do
       if not current.children[tag] then

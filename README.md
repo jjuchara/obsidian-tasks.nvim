@@ -29,10 +29,12 @@ Keep notes in Obsidian and stay in Neovim when it is time to execute. The plugin
 
 | | Capability |
 |---|---|
-| 🗂️ | Combine multiple vaults in one view or switch repositories with tabs inside the task view |
+| 🗂️ | Combine multiple vaults or collect many Markdown files into one logical repository |
 | 🌳 | Group tasks recursively by tag order: `#work #frontend #urgent` |
 | ⚡ | Complete tasks with `<Space>` and append `✅ YYYY-MM-DD` automatically |
 | ✍️ | Create tasks through a guided repository, tag, start date, and deadline flow |
+| 🛠️ | Edit, delete, and undo task changes directly from the task view |
+| 🔎 | Filter by tag, sort by source/title/deadline, and collapse native tag folds |
 | 🪟 | Use a centered floating window or a regular native split |
 | 🔒 | Detect stale source lines before writing and update files atomically |
 | 🧩 | Run on the built-in Neovim API with no required dependencies |
@@ -79,7 +81,12 @@ require("obsidian-tasks").setup({
     {
       name = "personal",
       alias = "Personal tasks",        -- optional display label
-      path = "~/notes/personal/Tasks.md",
+      vault = "~/notes/personal",
+      todo_file = "Tasks.md",          -- writable target for new tasks
+      sources = {                       -- optional read/write task sources
+        { glob = "Projects/**/*.md", tags = { "#project" } },
+        { glob = "Areas/**/*.md", tags = { "#area" } },
+      },
     },
     {
       name = "work",
@@ -136,6 +143,26 @@ require("obsidian-tasks").setup({
   },
 })
 ```
+
+Each repository has one writable `path` or `vault` + `todo_file`. New tasks are appended there. Optional `sources` collect tasks from additional Markdown files without copying them into the writable task file. A source `glob` may be absolute or relative to `vault`; its `tags` are view-only prefixes used for grouping and filtering.
+
+Project collections can derive one additional view-only tag from the frontmatter of the matching project metadata note:
+
+```lua
+sources = {
+  {
+    glob = "1. Projects/**/*.md",
+    tags = { "#project" },
+    project_tag = {
+      root = "1. Projects",
+      marker = "#projects",
+      exclude = { "#projects", "#project-support" },
+    },
+  },
+}
+```
+
+For a task below `1. Projects/example/`, the collector looks for a Markdown file in that project carrying the `#projects` frontmatter marker and uses its first non-excluded tag. A physical `#planning` task can therefore render under `#project → #example → #planning`. Computed tags are never written to the source task during editing; creation pickers also expose only physical Markdown tags.
 
 ## Usage
 
@@ -206,6 +233,12 @@ Tags are significant from left to right:
 
 When a task has no inline tag, the nearest `## #tag` heading is used as a fallback. YAML frontmatter and fenced code blocks are ignored.
 
+## Collected sources
+
+Collected tasks keep the path and line number of their original Markdown file. Toggle, edit, delete, undo, and `gf` therefore operate on the real source instead of a rendered or copied query result. This provides Dataview-style aggregation without executing Dataview or depending on a running Obsidian process.
+
+Source globs are evaluated in configuration order. If several globs match the same file, the first match owns it so the task is shown only once.
+
 ## Multiple repositories
 
 `repository_mode = "sections"` renders all repositories in one buffer with repository headers. `repository_mode = "tabs"` shows repository tabs inside the task view and renders tasks from the active repository. Use `<Tab>` / `<S-Tab>` or click a tab to switch repositories.
@@ -221,7 +254,7 @@ nvim --headless -u NONE -i NONE \
   +qa
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the contribution workflow and `:help obsidian-tasks` for the built-in manual.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the contribution workflow, [DECISIONS.md](DECISIONS.md) for durable product and architecture choices, and `:help obsidian-tasks` for the built-in manual.
 
 ## Status
 

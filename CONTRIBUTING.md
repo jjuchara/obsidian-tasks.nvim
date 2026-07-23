@@ -20,12 +20,16 @@ Before submitting a change:
 1. Add a regression test for behavior changes.
 2. Run the headless suite on a supported Neovim version.
 3. Run `stylua --check lua plugin tests`.
-4. Update README, help, and changelog when user-facing behavior changes.
+4. Regenerate help tags with `nvim --headless -u NONE -i NONE "+helptags doc" +qa` when Vim help tags change.
+5. Run `git diff --check`.
+6. Update affected canonical project documents in the Russian Obsidian project, then review the English README, Vim help, roadmap snapshot, changelog, and decision snapshot for user-visible drift.
 
 Install StyLua with `brew install stylua` on macOS or use another installation method from the upstream documentation.
 Run `stylua lua plugin tests` to format the Lua sources. The project configuration targets LuaJIT and is shared with CI.
 
 Keep modules dependency-free unless a dependency provides a clear benefit that cannot reasonably be implemented with the Neovim API.
+
+Durable product and architecture choices belong in the canonical Russian `DECISIONS.md` inside the `obsidian task` second-brain project referenced from [AGENTS.md](AGENTS.md). The repository [DECISIONS.md](DECISIONS.md) is its concise release-facing projection.
 
 ## Manual testing with LazyVim
 

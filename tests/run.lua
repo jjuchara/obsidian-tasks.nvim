@@ -148,6 +148,112 @@ local tree = grouping.group(tasks)
 assert(tree.children["#work"], "primary tag group is missing")
 assert(tree.children["#work"].children["#frontend"], "nested tag group is missing")
 
+assert_equal(
+  parser.frontmatter_tags({ "---", "tags: [projects, '#project-support', obsidianTasks]", "---" }),
+  { "#projects", "#project-support", "#obsidianTasks" },
+  "inline frontmatter tags must be normalized"
+)
+assert_equal(
+  parser.frontmatter_tags({ "---", "tags:", "  - projects", "  - obsidianTasks", "status: active", "---" }),
+  { "#projects", "#obsidianTasks" },
+  "frontmatter tag lists must be parsed"
+)
+
+local collector_root = vim.fn.tempname()
+vim.fn.mkdir(vim.fs.joinpath(collector_root, "Tasks"), "p")
+vim.fn.mkdir(vim.fs.joinpath(collector_root, "1. Projects", "alpha"), "p")
+vim.fn.mkdir(vim.fs.joinpath(collector_root, "2. Areas"), "p")
+local collector_main = vim.fs.joinpath(collector_root, "Tasks", "Tasks.md")
+local project_path = vim.fs.joinpath(collector_root, "1. Projects", "alpha", "00. alpha.md")
+local area_path = vim.fs.joinpath(collector_root, "2. Areas", "Health.md")
+vim.fn.writefile({
+  "# Tasks",
+  "",
+  "- [ ] Main task #personal",
+  "",
+  "```dataviewjs",
+  "dv.taskList(dv.pages().file.tasks);",
+  "```",
+}, collector_main)
+vim.fn.writefile({
+  "---",
+  "tags:",
+  "  - projects",
+  "  - project-support",
+  "  - alphaProject",
+  "---",
+  "# Alpha",
+  "",
+  "- [ ] Project task #planning",
+}, project_path)
+vim.fn.writefile({ "# Health", "", "- [ ] Area task" }, area_path)
+
+local collector_config = config_module.setup({
+  repositories = {
+    {
+      name = "collector",
+      vault = collector_root,
+      todo_file = "Tasks/Tasks.md",
+      sources = {
+        {
+          glob = "1. Projects/**/*.md",
+          tags = { "#project" },
+          project_tag = {
+            root = "1. Projects",
+            marker = "#projects",
+            exclude = { "#projects", "#project-support" },
+          },
+        },
+        { glob = "2. Areas/**/*.md", tags = { "#area" } },
+      },
+    },
+  },
+  view = { type = "window", window_command = "botright new", status = "all", filter = "#project" },
+})
+local collector_repo = collector_config.repositories[1]
+local collected = assert(repository.load(collector_repo))
+assert_equal(#collected, 3, "collector must combine the writable task file and source globs")
+local project_task = vim.iter(collected):find(function(task) return task.text:find("Project task", 1, true) end)
+local area_task = vim.iter(collected):find(function(task) return task.text:find("Area task", 1, true) end)
+assert(project_task, "project source task is missing")
+assert(area_task, "area source task is missing")
+assert_equal(project_task.path, project_path, "collected task must retain its physical source path")
+assert_equal(project_task.tags, { "#planning" }, "synthetic tags must not replace physical task tags")
+assert_equal(
+  project_task.view_tags,
+  { "#project", "#alphaProject", "#planning" },
+  "project grouping tags must precede physical task tags"
+)
+assert_equal(area_task.view_tags, { "#area" }, "source group tag must cover tagless tasks")
+local collected_tree = grouping.group(collected)
+assert(collected_tree.children["#project"].children["#alphaProject"], "project grouping hierarchy is missing")
+assert(collected_tree.children["#area"], "area grouping hierarchy is missing")
+assert_equal(repository.tags(collector_repo), { "#personal", "#planning" }, "creation tags must stay physical")
+assert_equal(
+  repository.tags(collector_repo, { view = true }),
+  { "#personal", "#project", "#alphaProject", "#planning", "#area" },
+  "filter tags must include synthetic grouping tags"
+)
+local collector_state = require("obsidian-tasks.ui").open(collector_config)
+local collector_rendered = table.concat(vim.api.nvim_buf_get_lines(collector_state.buf, 0, -1, false), "\n")
+assert(collector_rendered:find("Project task", 1, true), "synthetic project tag must match the active filter")
+assert(not collector_rendered:find("Area task", 1, true), "synthetic project filter must exclude other sources")
+vim.api.nvim_win_close(collector_state.win, true)
+
+local collector_update_ok = repository.update(project_task, {
+  text = "Updated project task",
+  tags = project_task.tags,
+  start_date = nil,
+  due_date = nil,
+})
+assert(collector_update_ok, "collected source task must remain editable")
+local project_source = vim.fn.readfile(project_path)
+local project_task_line = project_source[#project_source]
+assert(project_task_line:find("Updated project task #planning", 1, true), "source task edit was not persisted")
+assert(not project_task_line:find("#project", 1, true), "synthetic root tag leaked into the source task")
+assert(not project_task_line:find("#alphaProject", 1, true), "synthetic project tag leaked into the source task")
+vim.fn.delete(collector_root, "rf")
+
 local externally_changed = vim.fn.readfile(temp)
 table.insert(externally_changed, 5, "<!-- external change -->")
 vim.fn.writefile(externally_changed, temp)

@@ -48,6 +48,25 @@ M.defaults = {
 
 local function fail(message) error("obsidian-tasks: " .. message, 3) end
 
+local function normalize_tag(tag, context)
+  if type(tag) ~= "string" or tag == "" then
+    fail(context .. " must be a non-empty string")
+  end
+  tag = tag:gsub("^#+", "")
+  if tag == "" or tag:find("%s") then
+    fail(context .. " must be a tag without whitespace")
+  end
+  return "#" .. tag
+end
+
+local function normalize_relative_path(path, root)
+  path = vim.fn.expand(path)
+  if not path:match("^/") and not path:match("^%a:[/\\]") then
+    path = vim.fs.joinpath(root, path)
+  end
+  return vim.fs.normalize(path)
+end
+
 local function normalize_repository(repository, index)
   local repo = vim.deepcopy(repository)
   repo.name = repo.name or ("repository-" .. index)
@@ -63,6 +82,46 @@ local function normalize_repository(repository, index)
 
   repo.path = vim.fs.normalize(vim.fn.expand(repo.path))
   repo.vault = repo.vault and vim.fs.normalize(vim.fn.expand(repo.vault)) or vim.fs.dirname(repo.path)
+
+  if repo.sources ~= nil and type(repo.sources) ~= "table" then
+    fail(("repository %q sources must be a list"):format(repo.name))
+  end
+  for source_index, source in ipairs(repo.sources or {}) do
+    if type(source) ~= "table" or type(source.glob) ~= "string" or source.glob == "" then
+      fail(("repository %q source %d must define glob"):format(repo.name, source_index))
+    end
+    source.glob = normalize_relative_path(source.glob, repo.vault)
+    source.tags = source.tags or {}
+    if type(source.tags) ~= "table" then
+      fail(("repository %q source %d tags must be a list"):format(repo.name, source_index))
+    end
+    for tag_index, tag in ipairs(source.tags) do
+      source.tags[tag_index] =
+        normalize_tag(tag, ("repository %q source %d tag %d"):format(repo.name, source_index, tag_index))
+    end
+
+    if source.project_tag then
+      local project_tag = source.project_tag
+      if type(project_tag) ~= "table" or type(project_tag.root) ~= "string" or project_tag.root == "" then
+        fail(("repository %q source %d project_tag must define root"):format(repo.name, source_index))
+      end
+      project_tag.root = normalize_relative_path(project_tag.root, repo.vault)
+      project_tag.marker = normalize_tag(
+        project_tag.marker or "#projects",
+        ("repository %q source %d project_tag.marker"):format(repo.name, source_index)
+      )
+      project_tag.exclude = project_tag.exclude or { project_tag.marker }
+      if type(project_tag.exclude) ~= "table" then
+        fail(("repository %q source %d project_tag.exclude must be a list"):format(repo.name, source_index))
+      end
+      for tag_index, tag in ipairs(project_tag.exclude) do
+        project_tag.exclude[tag_index] = normalize_tag(
+          tag,
+          ("repository %q source %d project_tag.exclude %d"):format(repo.name, source_index, tag_index)
+        )
+      end
+    end
+  end
   return repo
 end
 

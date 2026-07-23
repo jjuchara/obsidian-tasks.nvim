@@ -20,6 +20,17 @@ local function strip_tags(text) return text:gsub("#([^%s#%[%]%(%){}<>,!%?;:`]+)"
 
 local function compact_spaces(text) return vim.trim(text:gsub("%s+", " ")) end
 
+local function append_frontmatter_tag(tags, seen, value)
+  local tag = vim.trim(value or ""):gsub("^['\"]", ""):gsub("['\"]$", ""):gsub("^#+", "")
+  if tag ~= "" and not tag:find("%s") then
+    tag = "#" .. tag
+    if not seen[tag] then
+      tags[#tags + 1] = tag
+      seen[tag] = true
+    end
+  end
+end
+
 local function inline_tags(line, section_tag)
   local tags = extract_tags(line)
   if #tags == 0 and section_tag then
@@ -28,7 +39,39 @@ local function inline_tags(line, section_tag)
   return tags
 end
 
-function M.parse_lines(lines, repository)
+function M.frontmatter_tags(lines)
+  if lines[1] ~= "---" then
+    return {}
+  end
+
+  local tags, seen = {}, {}
+  local in_tags = false
+  for index = 2, #lines do
+    local line = lines[index]
+    if line == "---" then
+      break
+    end
+
+    local inline = line:match("^tags:%s*(.-)%s*$")
+    if inline ~= nil then
+      in_tags = inline == ""
+      inline = inline:gsub("^%[", ""):gsub("%]$", "")
+      for value in inline:gmatch("[^,]+") do
+        append_frontmatter_tag(tags, seen, value)
+      end
+    elseif in_tags then
+      local value = line:match("^%s+%-%s+(.+)$")
+      if value then
+        append_frontmatter_tag(tags, seen, value)
+      elseif line:match("^%S") then
+        in_tags = false
+      end
+    end
+  end
+  return tags
+end
+
+function M.parse_lines(lines, repository, path)
   local tasks = {}
   local section_tag
   local in_frontmatter = lines[1] == "---"
@@ -52,7 +95,7 @@ function M.parse_lines(lines, repository)
           if marker then
             tasks[#tasks + 1] = {
               repository = repository,
-              path = repository.path,
+              path = path or repository.path,
               lnum = lnum,
               indent = indent,
               raw = line,

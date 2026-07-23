@@ -8,6 +8,7 @@ obsidian-tasks-config	obsidian-tasks.txt	/*obsidian-tasks-config*
 obsidian-tasks-contents	obsidian-tasks.txt	/*obsidian-tasks-contents*
 obsidian-tasks-format	obsidian-tasks.txt	/*obsidian-tasks-format*
 obsidian-tasks-introduction	obsidian-tasks.txt	/*obsidian-tasks-introduction*
+obsidian-tasks-mutations	obsidian-tasks.txt	/*obsidian-tasks-mutations*
 obsidian-tasks-setup	obsidian-tasks.txt	/*obsidian-tasks-setup*
 obsidian-tasks-task-view	obsidian-tasks.txt	/*obsidian-tasks-task-view*
 obsidian-tasks.nvim	obsidian-tasks.txt	/*obsidian-tasks.nvim*

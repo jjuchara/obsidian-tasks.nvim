@@ -1,5 +1,7 @@
 # Product
 
+This file is a concise public product snapshot for contributors. Canonical product thinking and planning live in the Russian Obsidian project.
+
 ## Register
 
 product

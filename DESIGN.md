@@ -20,6 +20,8 @@ components:
 
 # Design System: obsidian-tasks.nvim
 
+This file is a concise public design snapshot for contributors. Canonical design rationale and future design work live in the Russian Obsidian project.
+
 ## Overview
 
 **Creative North Star: "The Native Task Outline"**
@@ -93,6 +95,7 @@ The interface is flat by default. A floating view may use the configured native 
 
 - **Sections:** repository names appear as highlighted headings when repositories share a view.
 - **Tabs:** the winbar uses `TabLine` and `TabLineSel`; keyboard and mouse activation are equivalent.
+- **Collected sources:** one repository may render tasks from many Markdown files while preserving each task's physical source for every mutation and navigation action.
 
 ### Tag Groups
 
@@ -104,12 +107,12 @@ The interface is flat by default. A floating view may use the configured native 
 
 - **Structure:** `[ ]` and `[x]` communicate completion independently of color.
 - **State:** due-soon, overdue, completed, and normal tasks use semantic highlight groups.
-- **Behavior:** toggling and opening source operate on the task under the cursor.
+- **Behavior:** create, toggle, edit, delete, undo, and source-opening actions operate within the current task-view context.
 
 ### Inputs and Pickers
 
 - **Style:** use `vim.ui.input` and `vim.ui.select` so the user's configured provider owns presentation.
-- **State:** prompts state the expected value and preserve workflow context when asynchronous providers are used.
+- **State:** prompts state the expected value and preserve the active view, repository, focus, and selection context when asynchronous providers are used.
 
 ## Do's and Don'ts
 

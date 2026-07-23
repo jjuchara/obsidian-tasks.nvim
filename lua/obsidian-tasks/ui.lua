@@ -56,7 +56,9 @@ local function matches_status(task, status)
   return status == "all" or (status == "done" and task.done) or (status == "active" and not task.done)
 end
 
-local function matches_filter(task, tag_filter) return not tag_filter or vim.tbl_contains(task.tags, tag_filter) end
+local function task_tags(task) return task.view_tags or task.tags end
+
+local function matches_filter(task, tag_filter) return not tag_filter or vim.tbl_contains(task_tags(task), tag_filter) end
 
 local function add_line(output, line_map, highlights, text, highlight, task)
   output[#output + 1] = text
@@ -199,8 +201,8 @@ local function add_deadline_tags(tasks, today)
   local tagged = {}
   for _, task in ipairs(tasks) do
     local copy = vim.tbl_extend("force", {}, task)
-    copy.tags = { deadline_bucket(task, today) }
-    vim.list_extend(copy.tags, task.tags)
+    copy.view_tags = { deadline_bucket(task, today) }
+    vim.list_extend(copy.view_tags, task_tags(task))
     tagged[#tagged + 1] = copy
   end
   return tagged
@@ -415,7 +417,7 @@ function M.select_filter(repositories, callback)
   local items = { { label = "Clear filter", tag = false } }
   local seen = {}
   for _, repo in ipairs(repositories) do
-    local tags, error_message = repository.tags(repo)
+    local tags, error_message = repository.tags(repo, { view = true })
     if not tags then
       notify(error_message, vim.log.levels.ERROR)
     else

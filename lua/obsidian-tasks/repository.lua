@@ -3,6 +3,15 @@ local date = require("obsidian-tasks.date")
 
 local M = {}
 
+local function extend_unique(target, seen, values)
+  for _, value in ipairs(values or {}) do
+    if not seen[value] then
+      target[#target + 1] = value
+      seen[value] = true
+    end
+  end
+end
+
 local function read_lines(path)
   local ok, lines = pcall(vim.fn.readfile, path)
   if not ok then
@@ -33,12 +42,111 @@ local function write_lines(path, lines)
   return true
 end
 
+local function load_file(repository, path)
+  local lines, error_message = read_lines(path)
+  if not lines then
+    return nil, error_message
+  end
+  return parser.parse_lines(lines, repository, path), lines
+end
+
+local function project_key(root, path)
+  local prefix = root:gsub("[/\\]+$", "") .. "/"
+  local normalized = path:gsub("\\", "/")
+  if not vim.startswith(normalized, prefix:gsub("\\", "/")) then
+    return nil
+  end
+  local relative = normalized:sub(#prefix + 1)
+  local directory = relative:match("^([^/]+)/")
+  return directory or relative:gsub("%.md$", "")
+end
+
+local function project_tag_candidates(project_tag, path)
+  local key = project_key(project_tag.root, path)
+  if not key then
+    return {}
+  end
+
+  local direct = vim.fs.joinpath(project_tag.root, key .. ".md")
+  local candidates = vim.fn.glob(vim.fs.joinpath(project_tag.root, key, "**", "*.md"), false, true)
+  table.sort(candidates)
+  if vim.uv.fs_stat(direct) then
+    table.insert(candidates, 1, direct)
+  end
+  return candidates
+end
+
+local function resolve_project_tag(source, path, cache)
+  if not source.project_tag then
+    return nil
+  end
+  local key = project_key(source.project_tag.root, path)
+  if not key then
+    return nil
+  end
+  if cache[key] ~= nil then
+    return cache[key] or nil
+  end
+
+  local excluded = {}
+  for _, tag in ipairs(source.project_tag.exclude) do
+    excluded[tag] = true
+  end
+  for _, candidate in ipairs(project_tag_candidates(source.project_tag, path)) do
+    local lines = read_lines(candidate)
+    if lines then
+      local tags = parser.frontmatter_tags(lines)
+      if vim.tbl_contains(tags, source.project_tag.marker) then
+        for _, tag in ipairs(tags) do
+          if not excluded[tag] then
+            cache[key] = tag
+            return tag
+          end
+        end
+      end
+    end
+  end
+  cache[key] = false
+  return nil
+end
+
+local function apply_view_tags(tasks, source, project_cache)
+  for _, task in ipairs(tasks) do
+    local tags, seen = {}, {}
+    extend_unique(tags, seen, source.tags)
+    extend_unique(tags, seen, { resolve_project_tag(source, task.path, project_cache) })
+    extend_unique(tags, seen, task.tags)
+    task.view_tags = tags
+  end
+end
+
 function M.load(repository)
   local lines, error_message = read_lines(repository.path)
   if not lines then
     return nil, error_message
   end
-  return parser.parse_lines(lines, repository)
+  local tasks = parser.parse_lines(lines, repository, repository.path)
+  local seen_paths = { [repository.path] = true }
+
+  for _, source in ipairs(repository.sources or {}) do
+    local paths = vim.fn.glob(source.glob, false, true)
+    table.sort(paths)
+    local project_cache = {}
+    for _, path in ipairs(paths) do
+      path = vim.fs.normalize(path)
+      local stat = vim.uv.fs_stat(path)
+      if not seen_paths[path] and stat and stat.type == "file" then
+        seen_paths[path] = true
+        local source_tasks, source_error = load_file(repository, path)
+        if not source_tasks then
+          return nil, source_error
+        end
+        apply_view_tags(source_tasks, source, project_cache)
+        vim.list_extend(tasks, source_tasks)
+      end
+    end
+  end
+  return tasks
 end
 
 local function locate(lines, task)
@@ -232,14 +340,15 @@ function M.undo(undo)
   return true, { path = undo.path, lnum = lnum, raw = undo.before }
 end
 
-function M.tags(repository)
+function M.tags(repository, options)
+  options = options or {}
   local tasks, error_message = M.load(repository)
   if not tasks then
     return nil, error_message
   end
   local tags, seen = {}, {}
   for _, task in ipairs(tasks) do
-    for _, tag in ipairs(task.tags) do
+    for _, tag in ipairs(options.view and (task.view_tags or task.tags) or task.tags) do
       if not seen[tag] then
         tags[#tags + 1] = tag
         seen[tag] = true

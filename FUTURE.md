@@ -1,6 +1,6 @@
 # Roadmap
 
-This document tracks ideas that are intentionally outside the current core release. Items are not ordered commitments and may change as the plugin evolves.
+This is a public, non-committal snapshot of ideas outside the current core release. The canonical roadmap and planning state live in the Russian Obsidian project. Items here are not ordered commitments and may change as the plugin evolves.
 
 ## Reliability and compatibility
 
@@ -28,7 +28,6 @@ This document tracks ideas that are intentionally outside the current core relea
 - Open tasks through `obsidian://open` with correct URL encoding on macOS, Linux, and Windows.
 - Support recurrence and the extended syntax of the Obsidian Tasks community plugin.
 - Add a debounced filesystem watcher for automatic view refreshes.
-- Collect tasks from multiple files in one vault through glob patterns.
 
 ## Project quality
 

@@ -7,8 +7,9 @@ CONTENTS                                              *obsidian-tasks-contents*
 2. Setup .............................................. |obsidian-tasks-setup|
 3. Commands ........................................ |obsidian-tasks-commands|
 4. Task view ...................................... |obsidian-tasks-task-view|
-5. Markdown format ................................. |obsidian-tasks-format|
-6. Configuration ................................... |obsidian-tasks-config|
+5. Creating and editing ......................... |obsidian-tasks-mutations|
+6. Markdown format ................................. |obsidian-tasks-format|
+7. Configuration ................................... |obsidian-tasks-config|
 
 =============================================================================
 INTRODUCTION                                      *obsidian-tasks-introduction*
@@ -29,7 +30,12 @@ Call setup() with at least one repository: >lua
       {
         name = "personal",
         alias = "Personal tasks",
-        path = "~/notes/personal/Tasks.md",
+        vault = "~/notes/personal",
+        todo_file = "Tasks.md",
+        sources = {
+          { glob = "Projects/**/*.md", tags = { "#project" } },
+          { glob = "Areas/**/*.md", tags = { "#area" } },
+        },
       },
       {
         name = "work",
@@ -46,6 +52,32 @@ Call setup() with at least one repository: >lua
 A repository supports either a direct `path` or `vault` plus `todo_file`.
 The optional `alias` is used in tabs, section headers, selection prompts, and
 notifications while `name` remains the repository identifier.
+
+Optional `sources` collect tasks from additional Markdown files into the same
+logical repository. A source `glob` may be absolute or relative to `vault`.
+Its `tags` are view-only prefixes used for grouping and filtering. New tasks
+are still appended to the repository `path` or `todo_file`.
+
+Project collections may derive another view-only tag from project
+metadata: >lua
+
+  sources = {
+    {
+      glob = "1. Projects/**/*.md",
+      tags = { "#project" },
+      project_tag = {
+        root = "1. Projects",
+        marker = "#projects",
+        exclude = { "#projects", "#project-support" },
+      },
+    },
+  }
+<
+For each first-level project below `root`, the collector finds a Markdown file
+whose frontmatter contains `marker` and uses its first tag not listed in
+`exclude`. Computed tags precede physical task tags in the view, but are not
+written during editing and are not offered by creation pickers. Filter pickers
+include both computed and physical tags.
 
 =============================================================================
 COMMANDS                                                *obsidian-tasks-commands*
@@ -109,6 +141,26 @@ When task creation starts from an open task view, the view stays open and the
 newly created task is focused after refresh.
 
 =============================================================================
+CREATING AND EDITING                              *obsidian-tasks-mutations*
+
+Task creation selects a repository when needed, then prompts for task text, a
+primary tag, optional additional tags, a start date, and an optional due date.
+The primary-tag picker uses Space to select the highlighted tag; Enter can
+continue without a primary tag. In the additional-tag picker, Space toggles
+the highlighted tag and Enter accepts the current selection. Existing tags
+come from the selected repository, and `+ new tag...` creates another one.
+
+Date prompts accept YYYY-MM-DD, dates matching `dates.display_format`,
+`yesterday`, `today`, and `tomorrow`. Numeric days and months may omit leading
+zeroes. Dates are always persisted in ISO format.
+
+Editing rewrites task text, tags, start date, and due date while preserving the
+checkbox state, creation date, and completion date. Clearing the due date
+writes `creation.infinity_marker`. Deleting asks for confirmation. The latest
+successful create, toggle, edit, or delete operation can be undone while its
+source still matches the expected post-operation state.
+
+=============================================================================
 MARKDOWN FORMAT                                            *obsidian-tasks-format*
 
 Supported tasks are ordinary Markdown checkboxes: >markdown
@@ -122,6 +174,11 @@ Tags are grouped from left to right. The first example is rendered under
 `#work`, then `#frontend`, then `#urgent`. If inline tags are absent, the
 nearest `## #tag` heading is used. YAML frontmatter and fenced code are
 ignored.
+
+Collected source tasks retain the path and line number of their real Markdown
+file. Toggle, edit, delete, undo, and source opening operate on that file. The
+collector does not execute Dataview and does not require Obsidian to be open.
+Source globs are evaluated in order; the first matching source owns a file.
 
 =============================================================================
 CONFIGURATION                                            *obsidian-tasks-config*
