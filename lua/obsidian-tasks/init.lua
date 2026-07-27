@@ -1,5 +1,6 @@
 local config_module = require("obsidian-tasks.config")
 local date = require("obsidian-tasks.date")
+local date_picker = require("obsidian-tasks.date_picker")
 local parser = require("obsidian-tasks.parser")
 local repository = require("obsidian-tasks.repository")
 local ui = require("obsidian-tasks.ui")
@@ -258,32 +259,24 @@ local function build_task_line(name, tags, start_date, due_date)
   return line
 end
 
-local function prompt_date(prompt, default, allow_empty, callback, on_cancel)
-  vim.ui.input({ prompt = prompt }, function(input)
-    if input == nil then
+local function prompt_date(options, callback, on_cancel)
+  date_picker.pick({
+    picker = config.dates.picker,
+    prompt = options.prompt,
+    title = options.title,
+    initial = options.initial,
+    fallback = options.fallback,
+    allow_empty = options.allow_empty,
+    display_format = config.dates.display_format,
+    border = config.view.border,
+  }, function(result)
+    if result.action == "cancel" then
       if on_cancel then
         on_cancel()
       end
       return
     end
-    local value = vim.trim(input)
-    if value == "" then
-      if default then
-        callback(default)
-      elseif allow_empty then
-        callback(nil)
-      elseif on_cancel then
-        on_cancel()
-      end
-      return
-    end
-    local normalized, error_message = date.parse(value, nil, config.dates.display_format)
-    if not normalized then
-      notify(error_message, vim.log.levels.ERROR)
-      prompt_date(prompt, default, allow_empty, callback, on_cancel)
-      return
-    end
-    callback(normalized)
+    callback(result.action == "select" and result.value or nil)
   end)
 end
 
@@ -313,33 +306,38 @@ local function create_in(repo, on_finish)
         local start_default_display = start_default ~= "" and date.format(start_default, config.dates.display_format)
           or ""
         local due_example = date.format(assert(date.add_days(today, 1)), config.dates.display_format)
-        prompt_date(
-          "Start date [" .. start_default_display .. "]: ",
-          start_default ~= "" and start_default or nil,
-          true,
-          function(start_date)
-            prompt_date("Due date [e.g. " .. due_example .. "; empty = no deadline]: ", nil, true, function(due_date)
-              local line = build_task_line(name, tags, start_date, due_date)
-              local ok, result = repository.append(repo, { line = line, tags = tags })
-              if not ok then
-                notify(result, vim.log.levels.ERROR)
-                if on_finish then
-                  on_finish()
-                end
-                return
-              end
-              ui.set_undo(result.undo)
-              ui.focus_all(result)
-              local tag_path = #tags > 0 and table.concat(tags, " → ") or "no tags"
-              notify("task added to " .. repository_label(repo) .. ": " .. tag_path)
-              ui.refresh_all()
+        prompt_date({
+          prompt = "Start date [" .. start_default_display .. "]: ",
+          title = "Start date",
+          initial = start_default ~= "" and start_default or today,
+          fallback = start_default ~= "" and start_default or nil,
+          allow_empty = true,
+        }, function(start_date)
+          prompt_date({
+            prompt = "Due date [e.g. " .. due_example .. "; empty = no deadline]: ",
+            title = "Due date",
+            initial = start_date or assert(date.add_days(today, 1)),
+            allow_empty = true,
+          }, function(due_date)
+            local line = build_task_line(name, tags, start_date, due_date)
+            local ok, result = repository.append(repo, { line = line, tags = tags })
+            if not ok then
+              notify(result, vim.log.levels.ERROR)
               if on_finish then
                 on_finish()
               end
-            end, on_finish)
-          end,
-          on_finish
-        )
+              return
+            end
+            ui.set_undo(result.undo)
+            ui.focus_all(result)
+            local tag_path = #tags > 0 and table.concat(tags, " → ") or "no tags"
+            notify("task added to " .. repository_label(repo) .. ": " .. tag_path)
+            ui.refresh_all()
+            if on_finish then
+              on_finish()
+            end
+          end, on_finish)
+        end, on_finish)
       end, on_finish)
     end, on_finish)
   end)

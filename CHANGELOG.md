@@ -4,6 +4,17 @@ All notable changes to this project will be documented here.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-07-27
+
+### Added
+
+- An optional built-in calendar for selecting start and due dates during task creation and editing; enable it with `dates.picker = "calendar"` without adding a runtime dependency.
+- Vim-style calendar navigation by day, week, and month, a today shortcut, explicit date clearing, and manual input through the existing date parser.
+
+### Changed
+
+- Creation and editing now share one date-picker contract that distinguishes selection, clearing, and cancellation without partial task mutations.
+
 ## [0.8.0] - 2026-07-23
 
 ### Added
@@ -180,7 +191,8 @@ All notable changes to this project will be documented here.
 - Atomic writes and stale-line protection.
 - English, Russian, and `:help` documentation.
 
-[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.8...v0.8.0
 [0.7.8]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.7...v0.7.8
 [0.7.7]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.6...v0.7.7

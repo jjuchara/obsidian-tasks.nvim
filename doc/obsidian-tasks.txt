@@ -154,6 +154,13 @@ Date prompts accept YYYY-MM-DD, dates matching `dates.display_format`,
 `yesterday`, `today`, and `tomorrow`. Numeric days and months may omit leading
 zeroes. Dates are always persisted in ISO format.
 
+`dates.picker = "input"` keeps these text prompts by default.
+`dates.picker = "calendar"` opens the built-in calendar without external
+dependencies. In the calendar, h/l move by day, j/k by week, H/L by month, t
+returns to today, <CR> selects, x clears the field, i opens manual input, and q
+or <Esc> cancels the current flow. Selection, clearing, and cancellation are
+distinct results; cancellation does not write a task.
+
 Editing rewrites task text, tags, start date, and due date while preserving the
 checkbox state, creation date, and completion date. Clearing the due date
 writes `creation.infinity_marker`. Deleting asks for confirmation. The latest
@@ -203,6 +210,7 @@ The complete defaults are: >lua
     },
     dates = {
       display_format = "%d.%m.%Y",  -- strftime format for the task view
+      picker = "input",             -- "input" or "calendar"
     },
     creation = {
       default_start_today = true,
@@ -247,6 +255,8 @@ Leading zeroes in numeric months and days are optional.
 in the task view and date examples in creation prompts without changing the
 source Markdown. Incomplete tasks due today or tomorrow use
 `ObsidianTasksDueSoon`; overdue tasks use `ObsidianTasksOverdue`.
+`dates.picker = "calendar"` replaces date prompts with the native calendar
+while keeping manual input available on i. The default is `"input"`.
 
 Editing a task from the task view rewrites the Markdown task line while
 preserving the checkbox state, creation date, and completion date. Clearing the

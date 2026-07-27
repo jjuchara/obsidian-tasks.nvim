@@ -112,6 +112,7 @@ require("obsidian-tasks").setup({
 
   dates = {
     display_format = "%d.%m.%Y",  -- strftime format used in the task view
+    picker = "input",             -- "input" or the built-in "calendar"
   },
 
   creation = {
@@ -205,6 +206,8 @@ Tag groups use native Neovim folds and expose a fold column for mouse interactio
 3. Select or create the primary tag, press Space to choose the tag under the cursor, or press Enter immediately to continue without one.
 4. Choose any number of additional tags from the existing-tag list. Press Enter to continue, or press Space to toggle the tag under the cursor. Selected additional tags are marked with `[x]`; use `+ new tag...` to add and select a new tag.
 5. Confirm the start date and optional deadline. Enter `yesterday`, `today`, `tomorrow`, an ISO date such as `2026-07-10`, or a date matching `dates.display_format`. Leading zeroes are optional, so `7.3.2026` is accepted for `%d.%m.%Y`.
+
+The default `dates.picker = "input"` keeps the fast text workflow. Set it to `"calendar"` to use the built-in dependency-free calendar for both date fields. Use `h`/`l` to move by day, `j`/`k` by week, `H`/`L` by month, `t` for today, `<CR>` to select, `x` to clear, `i` for manual input, and `q`/`<Esc>` to cancel. Cancelling neither clears the date nor persists a partially completed task mutation.
 
 The completion notification shows the persisted tag path, for example `#work → #gantt`.
 When task creation starts from an open task view, the view stays open and the newly created task is focused after refresh.

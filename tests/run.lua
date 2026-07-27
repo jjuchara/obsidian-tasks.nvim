@@ -1,5 +1,7 @@
 local parser = require("obsidian-tasks.parser")
+local calendar = require("obsidian-tasks.calendar")
 local date = require("obsidian-tasks.date")
+local date_picker = require("obsidian-tasks.date_picker")
 local grouping = require("obsidian-tasks.grouping")
 local repository = require("obsidian-tasks.repository")
 local config_module = require("obsidian-tasks.config")
@@ -9,6 +11,14 @@ local function assert_equal(actual, expected, message)
     error(
       (message or "values differ") .. "\nactual: " .. vim.inspect(actual) .. "\nexpected: " .. vim.inspect(expected)
     )
+  end
+end
+
+local function mapping_callback(buffer, description)
+  for _, mapping in ipairs(vim.api.nvim_buf_get_keymap(buffer, "n")) do
+    if mapping.desc == description then
+      return mapping.callback
+    end
   end
 end
 
@@ -91,6 +101,8 @@ assert_equal(
   "leading-zero normalization must respect the configured field order"
 )
 assert_equal(date.add_days("2024-12-31", 1), "2025-01-01", "date addition must cross year boundaries")
+assert_equal(date.add_months("2024-01-31", 1), "2024-02-29", "month addition must clamp to leap February")
+assert_equal(date.add_months("2024-03-31", -1), "2024-02-29", "month subtraction must clamp the day")
 assert(not date.parse("2023-02-29"), "invalid calendar dates must be rejected")
 assert(not date.parse("29.02.2023", nil, "%d.%m.%Y"), "invalid display-formatted dates must be rejected")
 assert(not date.parse("0000-01-01"), "year zero must be rejected")
@@ -100,6 +112,79 @@ assert_equal(
   "➕ 01.07.2026 🛫 02.07.2026 📅 03.07.2026 ✅ 04.07.2026",
   "all supported dates must be formatted"
 )
+
+local february_grid = calendar.month_grid("2024-02-01")
+local february_days = {}
+for _, week in ipairs(february_grid) do
+  for _, day in pairs(week) do
+    february_days[#february_days + 1] = day
+  end
+end
+table.sort(february_days)
+assert_equal(#february_days, 29, "calendar grid must contain every leap-February day")
+assert_equal(february_days[1], 1, "calendar grid must begin with the first day")
+assert_equal(february_days[#february_days], 29, "calendar grid must end with the last day")
+
+local calendar_result
+local calendar_instance = calendar.open(
+  { initial = "2024-02-29", clearable = true },
+  function(result) calendar_result = result end
+)
+assert_equal(vim.bo[calendar_instance.buf].filetype, "obsidian-tasks-calendar", "calendar filetype is missing")
+assert(mapping_callback(calendar_instance.buf, "Next day"), "calendar next-day mapping is missing")()
+assert(mapping_callback(calendar_instance.buf, "Confirm date"), "calendar confirm mapping is missing")()
+assert_equal(
+  calendar_result,
+  { action = "select", value = "2024-03-01" },
+  "calendar selection crossed the month incorrectly"
+)
+
+calendar_result = nil
+calendar_instance = calendar.open(
+  { initial = "2024-03-01", clearable = true },
+  function(result) calendar_result = result end
+)
+assert(mapping_callback(calendar_instance.buf, "Clear date"), "calendar clear mapping is missing")()
+assert_equal(calendar_result, { action = "clear" }, "calendar clear result is incorrect")
+
+calendar_result = nil
+calendar_instance = calendar.open(
+  { initial = "2024-03-01", clearable = true },
+  function(result) calendar_result = result end
+)
+assert(mapping_callback(calendar_instance.buf, "Cancel date"), "calendar cancel mapping is missing")()
+assert_equal(calendar_result, { action = "cancel" }, "calendar cancel result is incorrect")
+
+calendar_result = nil
+calendar_instance = calendar.open({
+  initial = "2024-03-01",
+  clearable = true,
+  manual = function(selected, callback)
+    assert_equal(selected, "2024-03-01", "manual input received the wrong selected date")
+    callback({ action = "select", value = "2024-03-15" })
+  end,
+}, function(result) calendar_result = result end)
+assert(mapping_callback(calendar_instance.buf, "Enter date"), "calendar manual-input mapping is missing")()
+assert_equal(
+  calendar_result,
+  { action = "select", value = "2024-03-15" },
+  "calendar manual input did not return its selected date"
+)
+
+local input_results = {}
+local saved_input = vim.ui.input
+local input_values = { "tomorrow", "", nil }
+vim.ui.input = function(_, callback) callback(table.remove(input_values, 1)) end
+for _ = 1, 3 do
+  date_picker.input(
+    { prompt = "Date: ", allow_empty = true, display_format = "%d.%m.%Y" },
+    function(result) input_results[#input_results + 1] = result end
+  )
+end
+vim.ui.input = saved_input
+assert_equal(input_results[1], { action = "select", value = assert(date.add_days(date.today(), 1)) })
+assert_equal(input_results[2], { action = "clear" }, "empty input must explicitly clear a date")
+assert_equal(input_results[3], { action = "cancel" }, "cancelled input must not clear a date")
 
 local temp = vim.fn.tempname() .. ".md"
 local repo = { name = "test", path = temp }
@@ -114,6 +199,15 @@ assert(not ok, "conflicting task-view mappings must be rejected")
 assert(
   error_message:find('mappings.open_source conflicts with mappings.edit on "<CR>"', 1, true),
   "conflicting mapping error is unclear"
+)
+local invalid_picker_ok, invalid_picker_error = pcall(config_module.setup, {
+  repositories = { repo },
+  dates = { picker = "external" },
+})
+assert(not invalid_picker_ok, "unknown date picker must be rejected")
+assert(
+  invalid_picker_error:find("dates.picker must be 'input' or 'calendar'", 1, true),
+  "date picker validation error is unclear"
 )
 
 vim.fn.writefile({
@@ -465,6 +559,55 @@ assert_equal(date_prompts, {
   "Due date [e.g. " .. date.format(creation_tomorrow, "%d.%m.%Y") .. "; empty = no deadline]: ",
 }, "date prompt examples must use the configured display format")
 
+plugin.setup({
+  repositories = { repo },
+  dates = { display_format = "%d.%m.%Y", picker = "calendar" },
+})
+local calendar_create_inputs = { "Created with calendar" }
+vim.ui.input = function(_, callback) callback(table.remove(calendar_create_inputs, 1)) end
+vim.ui.select = function(items, options, callback)
+  if is_primary_tag_prompt(options.prompt) then
+    callback(select_tag_item(items, "#work"))
+  else
+    callback(select_done_item(items))
+  end
+end
+plugin.create()
+local start_calendar_buffer = vim.api.nvim_get_current_buf()
+assert_equal(vim.bo[start_calendar_buffer].filetype, "obsidian-tasks-calendar", "create start calendar did not open")
+assert(mapping_callback(start_calendar_buffer, "Confirm date"), "create start-date confirmation is missing")()
+local due_calendar_buffer = vim.api.nvim_get_current_buf()
+assert_equal(vim.bo[due_calendar_buffer].filetype, "obsidian-tasks-calendar", "create due calendar did not open")
+assert(mapping_callback(due_calendar_buffer, "Next day"), "create due-date navigation is missing")()
+assert(mapping_callback(due_calendar_buffer, "Confirm date"), "create due-date confirmation is missing")()
+vim.ui.input, vim.ui.select = original_input, original_select
+local calendar_created_task = vim
+  .iter(assert(repository.load(repo)))
+  :find(function(task) return task.text:find("Created with calendar", 1, true) ~= nil end)
+assert(calendar_created_task, "calendar creation flow did not persist the task")
+assert_equal(calendar_created_task.start_date, creation_today, "calendar creation stored the wrong start date")
+assert_equal(calendar_created_task.due_date, creation_tomorrow, "calendar creation stored the wrong due date")
+
+local cancelled_create_inputs = { "Cancelled calendar task" }
+vim.ui.input = function(_, callback) callback(table.remove(cancelled_create_inputs, 1)) end
+vim.ui.select = function(items, options, callback)
+  if is_primary_tag_prompt(options.prompt) then
+    callback(select_tag_item(items, "#work"))
+  else
+    callback(select_done_item(items))
+  end
+end
+plugin.create()
+local cancelled_create_calendar = vim.api.nvim_get_current_buf()
+assert(mapping_callback(cancelled_create_calendar, "Cancel date"), "create calendar cancellation is missing")()
+vim.ui.input, vim.ui.select = original_input, original_select
+assert(
+  not vim
+    .iter(assert(repository.load(repo)))
+    :any(function(task) return task.text:find("Cancelled calendar task", 1, true) ~= nil end),
+  "cancelling the calendar must not create a task"
+)
+
 local new_tag_temp = vim.fn.tempname() .. ".md"
 vim.fn.writefile({ "## #existing", "- [ ] Existing task #existing" }, new_tag_temp)
 plugin.setup({
@@ -681,6 +824,54 @@ for _, mapping in ipairs(vim.api.nvim_buf_get_keymap(state.buf, "n")) do
   end
 end
 assert(edit_task, "edit mapping is missing")
+for line, task in pairs(state.line_map) do
+  if task.text:find("Zulu", 1, true) then
+    vim.api.nvim_win_set_cursor(state.win, { line, 0 })
+    break
+  end
+end
+state.config.dates.picker = "calendar"
+local cancelled_edit_inputs = { "Cancelled calendar edit", "#cancelled" }
+vim.ui.input = function(_, callback) callback(table.remove(cancelled_edit_inputs, 1)) end
+edit_task()
+local cancelled_edit_calendar = vim.api.nvim_get_current_buf()
+assert(mapping_callback(cancelled_edit_calendar, "Cancel date"), "edit calendar cancellation is missing")()
+vim.ui.input = original_input
+assert(
+  vim.iter(assert(repository.load(view_repo))):any(function(task) return task.text:find("Zulu", 1, true) ~= nil end),
+  "cancelling the calendar edit changed the source task"
+)
+assert(
+  not vim
+    .iter(assert(repository.load(view_repo)))
+    :any(function(task) return task.text:find("Cancelled calendar edit", 1, true) ~= nil end),
+  "cancelling the calendar edit persisted partial text"
+)
+local calendar_edit_inputs = { "Calendar edited task", "#calendar" }
+vim.ui.input = function(_, callback) callback(table.remove(calendar_edit_inputs, 1)) end
+edit_task()
+local edit_start_calendar = vim.api.nvim_get_current_buf()
+assert_equal(vim.bo[edit_start_calendar].filetype, "obsidian-tasks-calendar", "edit start calendar did not open")
+assert(mapping_callback(edit_start_calendar, "Confirm date"), "edit start-date confirmation is missing")()
+local edit_due_calendar = vim.api.nvim_get_current_buf()
+assert_equal(vim.bo[edit_due_calendar].filetype, "obsidian-tasks-calendar", "edit due calendar did not open")
+assert(mapping_callback(edit_due_calendar, "Next day"), "edit due-date navigation is missing")()
+assert(mapping_callback(edit_due_calendar, "Confirm date"), "edit due-date confirmation is missing")()
+vim.ui.input = original_input
+local calendar_edited_task = vim
+  .iter(assert(repository.load(view_repo)))
+  :find(function(task) return task.text:find("Calendar edited task", 1, true) ~= nil end)
+assert(calendar_edited_task, "calendar edit flow did not persist the task")
+assert_equal(calendar_edited_task.start_date, today, "calendar edit stored the wrong start date")
+assert_equal(
+  calendar_edited_task.due_date,
+  assert(date.add_days(tomorrow, 1)),
+  "calendar edit stored the wrong due date"
+)
+local calendar_undo = mapping_callback(state.buf, "Undo latest task operation")
+assert(calendar_undo, "calendar edit undo mapping is missing")
+calendar_undo()
+state.config.dates.picker = "input"
 for line, task in pairs(state.line_map) do
   if task.text:find("Zulu", 1, true) then
     vim.api.nvim_win_set_cursor(state.win, { line, 0 })

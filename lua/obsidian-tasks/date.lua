@@ -7,6 +7,8 @@ local function days_in_month(year, month)
   return days[month]
 end
 
+function M.days_in_month(year, month) return days_in_month(year, month) end
+
 local function components(value)
   if type(value) ~= "string" then
     return nil
@@ -18,6 +20,8 @@ local function components(value)
   end
   return year, month, day
 end
+
+function M.components(value) return components(value) end
 
 local function normalize_components(year, month, day)
   year, month, day = tonumber(year), tonumber(month), tonumber(day)
@@ -56,6 +60,21 @@ function M.add_days(value, amount)
     end
   end
   return ("%04d-%02d-%02d"):format(year, month, day)
+end
+
+function M.add_months(value, amount)
+  local year, month, day = components(value)
+  if not year then
+    return nil, ("invalid date %q; expected YYYY-MM-DD"):format(value)
+  end
+  local absolute_month = year * 12 + month - 1 + amount
+  local target_year = math.floor(absolute_month / 12)
+  local target_month = absolute_month % 12 + 1
+  if target_year < 1 then
+    return nil, "date is outside the supported range"
+  end
+  day = math.min(day, days_in_month(target_year, target_month))
+  return ("%04d-%02d-%02d"):format(target_year, target_month, day)
 end
 
 local function escape_pattern(value) return (value:gsub("([%%%^%$%(%)%.%[%]%*%+%-%?])", "%%%1")) end

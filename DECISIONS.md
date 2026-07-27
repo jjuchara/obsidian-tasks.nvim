@@ -43,3 +43,9 @@ This release-facing log summarizes durable product and architecture constraints 
 - **Status:** Accepted
 - **Decision:** Maintain product thinking, planning, ideas, decisions, design, manual-testing evidence, and roadmap state in Russian under the Obsidian `obsidian task` project. Keep this Git repository limited to code-adjacent and release-facing English documentation required by users and contributors.
 - **Consequences:** Repository README, Vim help, changelog, contributor guidance, roadmap, product/design, and decision files are public projections rather than the authority for project direction. Meaningful work updates Obsidian first and then refreshes every affected public projection; repository-only planning is not durable project state.
+
+## D-008: Calendar date selection remains an optional native UI
+
+- **Status:** Accepted
+- **Decision:** Provide a built-in Neovim calendar as an optional alternative to text input for task start and due dates. Text input remains the default and stays available from the calendar; no external calendar dependency is required.
+- **Consequences:** Creation and editing share an asynchronous contract that distinguishes an ISO-date selection, explicit clearing, and cancellation. The calendar must preserve keyboard-first operation, user colorschemes, task-view context, and Neovim 0.10+ compatibility. Synchronization with Google Calendar, Apple Calendar, or other external services is outside this decision.

@@ -1,4 +1,5 @@
 local date = require("obsidian-tasks.date")
+local date_picker = require("obsidian-tasks.date_picker")
 local grouping = require("obsidian-tasks.grouping")
 local parser = require("obsidian-tasks.parser")
 local repository = require("obsidian-tasks.repository")
@@ -517,31 +518,33 @@ local function open_source(state)
   vim.api.nvim_win_set_cursor(0, { task.lnum, 0 })
 end
 
-local function prompt_edit_date(state, label, current, callback)
+local function prompt_edit_date(state, label, current, callback, on_cancel)
   local default = current and date.format(current, state.config.dates.display_format) or ""
-  vim.ui.input({ prompt = label .. " date: ", default = default }, function(input)
-    if input == nil then
+  date_picker.pick({
+    picker = state.config.dates.picker,
+    prompt = label .. " date: ",
+    title = label .. " date",
+    initial = current or date.today(),
+    input_default = default,
+    allow_empty = true,
+    display_format = state.config.dates.display_format,
+    border = state.config.view.border,
+  }, function(result)
+    if result.action == "cancel" then
+      if on_cancel then
+        on_cancel()
+      end
       return
     end
-    local value = vim.trim(input)
-    if value == "" then
-      callback(nil)
-      return
-    end
-    local normalized, error_message = date.parse(value, nil, state.config.dates.display_format)
-    if not normalized then
-      notify(error_message, vim.log.levels.ERROR)
-      prompt_edit_date(state, label, current, callback)
-      return
-    end
-    callback(normalized)
+    callback(result.action == "select" and result.value or nil)
   end)
 end
 
-local function edit(state)
+local function edit(state, on_finish)
   local task = current_task(state)
   if not task then
     notify("place the cursor on a task", vim.log.levels.WARN)
+    on_finish()
     return
   end
 
@@ -551,16 +554,18 @@ local function edit(state)
   })
   vim.ui.input({ prompt = "Task text: ", default = text }, function(text_input)
     if text_input == nil then
+      on_finish()
       return
     end
     local updated_text = vim.trim(text_input)
     if updated_text == "" then
       notify("task text cannot be empty", vim.log.levels.ERROR)
-      edit(state)
+      edit(state, on_finish)
       return
     end
     vim.ui.input({ prompt = "Tags: ", default = table.concat(task.tags, " ") }, function(tag_input)
       if tag_input == nil then
+        on_finish()
         return
       end
       local tags = parser.parse_tag_input(tag_input)
@@ -576,14 +581,16 @@ local function edit(state)
           )
           if not ok then
             notify(result, vim.log.levels.ERROR)
+            on_finish()
             return
           end
           last_undo = result.undo
           state.cursor_target = result
           notify("task updated")
           M.refresh_all()
-        end)
-      end)
+          on_finish()
+        end, on_finish)
+      end, on_finish)
     end)
   end)
 end
@@ -642,7 +649,17 @@ local function configure_buffer(state)
     end
   end, "Create task")
   map(state, mappings.toggle, function() toggle(state) end, "Toggle task")
-  map(state, mappings.edit, function() edit(state) end, "Edit task")
+  map(state, mappings.edit, function()
+    M.set_task_flow_active(true)
+    local finished = false
+    edit(state, function()
+      if finished then
+        return
+      end
+      finished = true
+      M.set_task_flow_active(false)
+    end)
+  end, "Edit task")
   map(state, mappings.delete, function() delete_task(state) end, "Delete task")
   map(state, mappings.undo, function() undo_latest(state) end, "Undo latest task operation")
   map(state, mappings.open_source, function() open_source(state) end, "Open task source")

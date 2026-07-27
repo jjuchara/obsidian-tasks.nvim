@@ -18,6 +18,7 @@ M.defaults = {
   },
   dates = {
     display_format = "%d.%m.%Y",
+    picker = "input",
   },
   creation = {
     default_start_today = true,
@@ -199,6 +200,9 @@ function M.setup(options)
   local valid_format = pcall(os.date, config.dates.display_format, os.time())
   if not valid_format then
     fail("dates.display_format is not a valid strftime format")
+  end
+  if not vim.tbl_contains({ "input", "calendar" }, config.dates.picker) then
+    fail("dates.picker must be 'input' or 'calendar'")
   end
   validate_task_view_mappings(config.mappings)
 
