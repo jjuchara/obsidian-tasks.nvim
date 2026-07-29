@@ -18,7 +18,7 @@ M.defaults = {
   },
   dates = {
     display_format = "%d.%m.%Y",
-    picker = "input",
+    picker = "calendar",
   },
   creation = {
     default_start_today = true,

@@ -171,6 +171,49 @@ assert_equal(
   "calendar manual input did not return its selected date"
 )
 
+local toggled_picker_result
+date_picker.pick({
+  picker = "calendar",
+  title = "Toggle date",
+  prompt = "Toggle date: ",
+  initial = "2024-03-01",
+  allow_empty = true,
+  display_format = "%d.%m.%Y",
+}, function(result) toggled_picker_result = result end)
+local toggle_calendar_buffer = vim.api.nvim_get_current_buf()
+assert(
+  table.concat(vim.api.nvim_buf_get_lines(toggle_calendar_buffer, 0, -1, false), "\n"):find("i/C%-i input"),
+  "calendar must show its input toggle hotkey"
+)
+assert(mapping_callback(toggle_calendar_buffer, "Enter date"), "calendar input toggle is missing")()
+local toggle_input_buffer = vim.api.nvim_get_current_buf()
+assert_equal(vim.bo[toggle_input_buffer].filetype, "obsidian-tasks-date-input", "date input popup did not open")
+assert(
+  chunks_text(vim.api.nvim_win_get_config(0).footer):find("Ctrl%-I calendar"),
+  "date input must show its calendar toggle hotkey"
+)
+assert(
+  vim.api.nvim_win_get_width(0) >= vim.fn.strdisplaywidth(chunks_text(vim.api.nvim_win_get_config(0).footer)),
+  "date input footer must fit without truncating its hotkeys"
+)
+vim.api.nvim_buf_set_lines(toggle_input_buffer, 0, -1, false, { "18.3.2024" })
+assert(mapping_callback(toggle_input_buffer, "Toggle date calendar"), "input calendar toggle is missing")()
+assert_equal(vim.api.nvim_get_current_buf(), toggle_calendar_buffer, "date input did not return to its calendar")
+assert(mapping_callback(toggle_calendar_buffer, "Enter date"), "calendar input toggle disappeared")()
+toggle_input_buffer = vim.api.nvim_get_current_buf()
+assert_equal(
+  vim.api.nvim_buf_get_lines(toggle_input_buffer, 0, 1, false)[1],
+  "18.03.2024",
+  "date input toggle did not update the calendar selection"
+)
+vim.api.nvim_buf_set_lines(toggle_input_buffer, 0, -1, false, { "15.3.2024" })
+assert(mapping_callback(toggle_input_buffer, "Confirm date input"), "date input confirmation is missing")()
+assert_equal(
+  toggled_picker_result,
+  { action = "select", value = "2024-03-15" },
+  "calendar/input toggle did not preserve date parsing"
+)
+
 local input_results = {}
 local saved_input = vim.ui.input
 local input_values = { "tomorrow", "", nil }
@@ -209,6 +252,8 @@ assert(
   invalid_picker_error:find("dates.picker must be 'input' or 'calendar'", 1, true),
   "date picker validation error is unclear"
 )
+local default_picker_config = config_module.setup({ repositories = { repo } })
+assert_equal(default_picker_config.dates.picker, "calendar", "calendar must be the default date picker")
 
 vim.fn.writefile({
   "---",
@@ -430,7 +475,7 @@ assert(repository.append(repo, {
 }))
 
 local plugin = require("obsidian-tasks")
-plugin.setup({ repositories = { repo } })
+plugin.setup({ repositories = { repo }, dates = { picker = "input" } })
 local original_input, original_select = vim.ui.input, vim.ui.select
 local inputs = { "Created through UI", "", "" }
 vim.ui.input = function(options, callback)
@@ -615,6 +660,7 @@ plugin.setup({
     repo,
     { name = "new-tag-test", path = new_tag_temp },
   },
+  dates = { picker = "input" },
 })
 local new_tag_input_active = false
 vim.ui.select = function(items, options, callback)
@@ -661,7 +707,7 @@ assert(
 local no_tag_temp = vim.fn.tempname() .. ".md"
 local no_tag_repo = { name = "no-tag-test", path = no_tag_temp }
 vim.fn.writefile({ "# Tasks" }, no_tag_temp)
-plugin.setup({ repositories = { no_tag_repo } })
+plugin.setup({ repositories = { no_tag_repo }, dates = { picker = "input" } })
 local no_tag_inputs = { "Created without tags", "", "" }
 vim.ui.input = function(_, callback) callback(table.remove(no_tag_inputs, 1)) end
 vim.ui.select = function(items, options, callback)
@@ -695,7 +741,7 @@ vim.fn.writefile({
 plugin.setup({
   repositories = { view_repo },
   view = { type = "window", window_command = "botright new", status = "all", sort = "source" },
-  dates = { display_format = "%d.%m.%Y" },
+  dates = { display_format = "%d.%m.%Y", picker = "input" },
 })
 local state = plugin.open()
 local rendered = table.concat(vim.api.nvim_buf_get_lines(state.buf, 0, -1, false), "\n")
@@ -1002,6 +1048,7 @@ plugin.setup({
     repository_mode = "tabs",
     status = "all",
   },
+  dates = { picker = "input" },
 })
 local tabpage_count = #vim.api.nvim_list_tabpages()
 local tabs_state = plugin.open()
@@ -1111,6 +1158,7 @@ vim.api.nvim_win_close(collapsed_state.win, true)
 plugin.setup({
   repositories = { view_repo },
   view = { type = "float", close_on_leave = true, status = "all" },
+  dates = { picker = "input" },
 })
 local float_state = plugin.open()
 local float_config = vim.api.nvim_win_get_config(float_state.win)

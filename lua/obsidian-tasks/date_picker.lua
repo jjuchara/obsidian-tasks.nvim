@@ -1,5 +1,6 @@
 local calendar = require("obsidian-tasks.calendar")
 local date = require("obsidian-tasks.date")
+local date_input = require("obsidian-tasks.date_input")
 
 local M = {}
 
@@ -45,11 +46,14 @@ function M.pick(options, callback)
     clearable = options.allow_empty,
     border = options.border,
     manual = function(selected, done)
-      input({
+      date_input.open({
         prompt = options.prompt,
+        title = (options.title or "Date") .. " input",
+        initial = selected,
         input_default = date.format(selected, options.display_format),
         allow_empty = options.allow_empty,
         display_format = options.display_format,
+        border = options.border,
       }, done)
     end,
   }, callback)

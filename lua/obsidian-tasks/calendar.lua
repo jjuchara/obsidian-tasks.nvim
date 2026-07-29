@@ -84,7 +84,7 @@ function M.open(options, callback)
       lines[#lines + 1] = string.rep(" ", offset) .. table.concat(cells)
     end
     lines[#lines + 1] = ""
-    lines[#lines + 1] = centered("Enter select  x clear  i input", width)
+    lines[#lines + 1] = centered("Enter select  x clear  i/C-i input", width)
     lines[#lines + 1] = centered("hjkl move  H/L month  t today", width)
 
     vim.bo[buffer].modifiable = true
@@ -165,12 +165,22 @@ function M.open(options, callback)
       finish({ action = "clear" })
     end
   end, "Clear date")
-  map("i", function()
+  map({ "i", "<C-i>" }, function()
     if not options.manual then
       return
     end
     options.manual(selected, function(result)
       if result.action == "cancel" then
+        if vim.api.nvim_win_is_valid(window) then
+          vim.api.nvim_set_current_win(window)
+        end
+        return
+      end
+      if result.action == "toggle" then
+        if date.components(result.value) then
+          selected = result.value
+          render()
+        end
         if vim.api.nvim_win_is_valid(window) then
           vim.api.nvim_set_current_win(window)
         end

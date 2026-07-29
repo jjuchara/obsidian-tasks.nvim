@@ -4,6 +4,13 @@ All notable changes to this project will be documented here.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-07-29
+
+### Changed
+
+- The built-in calendar is now the default for every start and due date in task creation and editing; set `dates.picker = "input"` explicitly to retain the prompt-first workflow.
+- The calendar and native manual date input now toggle in both directions with `<C-i>`; `i` also opens manual input from the calendar, and both popups keep their hotkeys visible.
+
 ## [0.9.0] - 2026-07-27
 
 ### Added
@@ -191,7 +198,8 @@ All notable changes to this project will be documented here.
 - Atomic writes and stale-line protection.
 - English, Russian, and `:help` documentation.
 
-[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.8...v0.8.0
 [0.7.8]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.7.7...v0.7.8
