@@ -162,6 +162,20 @@ manual-input popup returns to the same calendar. Set `dates.picker = "input"`
 explicitly to retain the prompt-first workflow. Selection, clearing, and
 cancellation are distinct results; cancellation does not write a task.
 
+Lua integrations may call: >lua
+
+  require("obsidian-tasks").create({
+    repository = "personal",
+    initial_name = "Follow linked note",
+    description_suffix = "[[Projects/Linked note]]",
+  })
+<
+`repository` selects one configured repository by name and bypasses the active
+task view or repository picker. `initial_name` pre-fills the editable task
+prompt. `description_suffix` adds caller-owned context before tags and task
+metadata. Every field is optional, and an unknown explicit repository fails
+before mutation.
+
 Editing rewrites task text, tags, start date, and due date while preserving the
 checkbox state, creation date, and completion date. Clearing the due date
 writes `creation.infinity_marker`. Deleting asks for confirmation. The latest

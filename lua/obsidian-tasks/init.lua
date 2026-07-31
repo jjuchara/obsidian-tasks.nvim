@@ -245,9 +245,12 @@ local function select_additional_tags(repo, primary_tag, callback, on_cancel)
   choose()
 end
 
-local function build_task_line(name, tags, start_date, due_date)
+local function build_task_line(name, tags, start_date, due_date, description_suffix)
   local today = date.today()
   local line = "- [ ] " .. name
+  if description_suffix then
+    line = line .. " " .. description_suffix
+  end
   if #tags > 0 then
     line = line .. " " .. table.concat(tags, " ")
   end
@@ -280,8 +283,8 @@ local function prompt_date(options, callback, on_cancel)
   end)
 end
 
-local function create_in(repo, on_finish)
-  vim.ui.input({ prompt = "Task: " }, function(name)
+local function create_in(repo, options, on_finish)
+  vim.ui.input({ prompt = "Task: ", default = options.initial_name }, function(name)
     if not name or name == "" then
       if on_finish then
         on_finish()
@@ -319,7 +322,7 @@ local function create_in(repo, on_finish)
             initial = start_date or assert(date.add_days(today, 1)),
             allow_empty = true,
           }, function(due_date)
-            local line = build_task_line(name, tags, start_date, due_date)
+            local line = build_task_line(name, tags, start_date, due_date, options.description_suffix)
             local ok, result = repository.append(repo, { line = line, tags = tags })
             if not ok then
               notify(result, vim.log.levels.ERROR)
@@ -361,8 +364,32 @@ function M.open()
   return ui.open(config)
 end
 
-function M.create()
+local function normalize_create_options(options)
+  if options == nil then
+    return {}
+  end
+  if type(options) ~= "table" then
+    error("obsidian-tasks: create options must be a table", 3)
+  end
+  for _, name in ipairs({ "repository", "initial_name", "description_suffix" }) do
+    local value = options[name]
+    if value ~= nil and (type(value) ~= "string" or vim.trim(value) == "") then
+      error(("obsidian-tasks: create option %s must be a non-empty string"):format(name), 3)
+    end
+    if type(value) == "string" and value:find("[\r\n]") then
+      error(("obsidian-tasks: create option %s must be one line"):format(name), 3)
+    end
+  end
+  return options
+end
+
+local function find_repository(name)
+  return vim.iter(config.repositories):find(function(repo) return repo.name == name end)
+end
+
+function M.create(options)
   ensure_setup()
+  options = normalize_create_options(options)
   ui.set_task_flow_active(true)
   local finished = false
   local function finish()
@@ -372,14 +399,23 @@ function M.create()
     finished = true
     ui.set_task_flow_active(false)
   end
+  if options.repository then
+    local selected_repository = find_repository(options.repository)
+    if not selected_repository then
+      finish()
+      error(("obsidian-tasks: unknown repository %q"):format(options.repository), 2)
+    end
+    create_in(selected_repository, options, finish)
+    return
+  end
   local current_repository = ui.current_repository()
   if current_repository then
-    create_in(current_repository, finish)
+    create_in(current_repository, options, finish)
     return
   end
   select_repository(function(repo)
     if repo then
-      create_in(repo, finish)
+      create_in(repo, options, finish)
     else
       finish()
     end

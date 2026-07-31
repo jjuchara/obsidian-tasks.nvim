@@ -49,3 +49,9 @@ This release-facing log summarizes durable product and architecture constraints 
 - **Status:** Accepted
 - **Decision:** Use the built-in Neovim calendar by default for every start and due date in task creation and editing. Manual input remains a peer mode: `<C-i>` toggles in both directions, while `i` is an additional calendar-to-input shortcut. `dates.picker = "input"` remains available for users who explicitly prefer the prompt-first workflow; no external calendar dependency is required.
 - **Consequences:** Creation and editing share an asynchronous contract that distinguishes an ISO-date selection, explicit clearing, and cancellation. Manual date input uses a native popup so toggling, visible hotkeys, and focus restoration do not depend on an external `vim.ui.input` provider. Both modes must preserve keyboard-first operation, user colorschemes, task-view context, and Neovim 0.10+ compatibility. Synchronization with Google Calendar, Apple Calendar, or other external services is outside this decision.
+
+## D-009: Integrations may supply explicit creation context
+
+- **Status:** Accepted
+- **Decision:** Keep `create()` fully interactive by default while allowing integrations to select a repository by name, prefill the editable task name, and append caller-owned description context before task metadata.
+- **Consequences:** An explicit repository bypasses active-view routing and the repository picker, preventing unrelated UI state from redirecting a task. Unknown repositories fail before mutation. The normal tag and date flow, cancellation behavior, atomic persistence, and undo remain unchanged.

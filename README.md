@@ -214,6 +214,13 @@ When task creation starts from an open task view, the view stays open and the ne
 Dates are always stored as `YYYY-MM-DD`. `dates.display_format` changes rendered dates and the examples shown in creation prompts without modifying Markdown. Active tasks due today or tomorrow use `ObsidianTasksDueSoon`; overdue tasks use `ObsidianTasksOverdue`.
 Deadline sorting adds virtual `#overdue`, `#due-soon`, and `#on-track` groups. `#due-soon` covers today and tomorrow; later deadlines, completed tasks, and tasks without deadlines are `#on-track`.
 
+Integrations may call `require("obsidian-tasks").create(options)`. `repository` selects one
+configured repository by `name` and bypasses the active task view or repository picker;
+`initial_name` pre-fills the editable task prompt; and `description_suffix` adds caller-owned
+context, such as an Obsidian wikilink, before tags and task metadata. All fields are optional, so
+`create()` retains the normal interactive behavior. An unknown explicit repository fails before
+any task mutation.
+
 Editing a task from the task view rewrites the Markdown task line while preserving the checkbox state, creation date, and completion date. Clearing the deadline stores the configured no-deadline marker.
 
 ## Markdown format

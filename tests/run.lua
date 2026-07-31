@@ -722,6 +722,58 @@ local no_tag_task = vim
 assert(no_tag_task, "task creation without tags is missing")
 assert_equal(no_tag_task.tags, {}, "continuing without a selected primary tag must create a tagless task")
 
+local linked_temp = vim.fn.tempname() .. ".md"
+vim.fn.writefile({ "# Linked tasks" }, linked_temp)
+local linked_repo = { name = "linked", path = linked_temp }
+plugin.setup({ repositories = { no_tag_repo, linked_repo }, dates = { picker = "input" } })
+local linked_input_options
+local linked_inputs = { "", "" }
+vim.ui.input = function(options, callback)
+  if options.prompt == "Task: " then
+    linked_input_options = options
+    callback(options.default)
+  else
+    callback(table.remove(linked_inputs, 1))
+  end
+end
+vim.ui.select = function(items, options, callback)
+  assert(options.prompt ~= "Repository:", "an explicit repository must bypass repository selection")
+  callback(select_done_item(items))
+end
+plugin.create({
+  repository = "linked",
+  initial_name = "Follow linked note",
+  description_suffix = "[[1. Projects/example/Linked note]]",
+})
+vim.ui.input, vim.ui.select = original_input, original_select
+assert_equal(linked_input_options.default, "Follow linked note", "create options must prefill the task name")
+local linked_task = vim
+  .iter(assert(repository.load(linked_repo)))
+  :find(function(task) return task.text:find("Follow linked note", 1, true) ~= nil end)
+assert(linked_task, "explicit-repository task creation is missing")
+assert(
+  linked_task.text:find("[[1. Projects/example/Linked note]]", 1, true),
+  "task creation must preserve the description suffix"
+)
+assert(
+  not vim
+    .iter(assert(repository.load(no_tag_repo)))
+    :any(function(task) return task.text:find("Follow linked note", 1, true) ~= nil end),
+  "explicit task creation wrote to a different repository"
+)
+local unknown_repository_ok, unknown_repository_error = pcall(plugin.create, { repository = "missing" })
+assert(not unknown_repository_ok, "an unknown explicit repository must fail")
+assert(
+  tostring(unknown_repository_error):find('unknown repository "missing"', 1, true),
+  "unknown-repository error is unclear"
+)
+local multiline_suffix_ok, multiline_suffix_error = pcall(plugin.create, { description_suffix = "first\nsecond" })
+assert(not multiline_suffix_ok, "a multiline description suffix must fail")
+assert(
+  tostring(multiline_suffix_error):find("description_suffix must be one line", 1, true),
+  "multiline-suffix error is unclear"
+)
+
 local view_temp = vim.fn.tempname() .. ".md"
 local view_repo = { name = "view-test", path = view_temp }
 local today = date.today()
