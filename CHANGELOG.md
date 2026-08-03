@@ -12,6 +12,8 @@ All notable changes to this project will be documented here.
   a completed task write into a false failure.
 - Single-line HTML comments used as integration markers remain hidden in task display/edit text and
   are preserved when the task is edited.
+- Published annotated tag and public GitHub Release `v0.12.0` from commit
+  `612837e82094a20d42b26ef4779665111b75f719`; CI run `30813631515` passed.
 
 ## [0.11.0] - 2026-07-31
 

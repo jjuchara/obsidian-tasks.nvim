@@ -10,7 +10,7 @@
 
 ## Current State
 
-The current release candidate is `v0.12.0`. The plugin targets Neovim 0.10+, has no required runtime dependencies, and supports multi-repository views, source-glob collection with view-only PARA and project tags, ordered tag grouping and filtering, sorting, native folds, guided creation, explicit linked-task creation context and successful-toggle subscriptions for integrations, a default built-in calendar with two-way manual-input toggling, guarded task mutations, and one-step undo. Treat `README.md`, `doc/obsidian-tasks.txt`, and the defaults in `lua/obsidian-tasks/config.lua` as the public behavior contract, and the Obsidian project as the authority for roadmap and project state.
+The latest stable release is `v0.12.0`. The plugin targets Neovim 0.10+, has no required runtime dependencies, and supports multi-repository views, source-glob collection with view-only PARA and project tags, ordered tag grouping and filtering, sorting, native folds, guided creation, explicit linked-task creation context and successful-toggle subscriptions for integrations, a default built-in calendar with two-way manual-input toggling, guarded task mutations, and one-step undo. Treat `README.md`, `doc/obsidian-tasks.txt`, and the defaults in `lua/obsidian-tasks/config.lua` as the public behavior contract, and the Obsidian project as the authority for roadmap and project state.
 
 ## Project Structure & Module Organization
 
