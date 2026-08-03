@@ -113,6 +113,35 @@ assert_equal(
   "all supported dates must be formatted"
 )
 
+local marked_tasks = parser.parse_lines({
+  "- [ ] Linked [[6. Inbox/Note]] <!-- obsidian-para-flow:expire-on-complete --> #work",
+}, { name = "marked", path = "marked.md" })
+assert_equal(
+  marked_tasks[1].html_comments,
+  { "<!-- obsidian-para-flow:expire-on-complete -->" },
+  "task parser did not retain the integration marker"
+)
+assert_equal(
+  parser.display_text(marked_tasks[1].text),
+  "Linked [[6. Inbox/Note]] #work",
+  "task display text exposed the hidden integration marker"
+)
+assert_equal(
+  parser.clean_task_text(marked_tasks[1].text),
+  "Linked [[6. Inbox/Note]]",
+  "task edit text exposed the hidden integration marker"
+)
+local marked_temp = vim.fn.tempname() .. ".md"
+vim.fn.writefile({ marked_tasks[1].raw }, marked_temp)
+local marked_repo = { name = "marked", path = marked_temp }
+local marked_task = assert(repository.load(marked_repo))[1]
+assert(repository.update(marked_task, { text = "Updated link", tags = { "#work" } }), "editing a marked task failed")
+assert(
+  vim.fn.readfile(marked_temp)[1]:find("<!-- obsidian-para-flow:expire-on-complete -->", 1, true),
+  "editing removed the hidden integration marker"
+)
+vim.fn.delete(marked_temp)
+
 local february_grid = calendar.month_grid("2024-02-01")
 local february_days = {}
 for _, week in ipairs(february_grid) do
@@ -795,6 +824,14 @@ plugin.setup({
   view = { type = "window", window_command = "botright new", status = "all", sort = "source" },
   dates = { display_format = "%d.%m.%Y", picker = "input" },
 })
+local invalid_listener_ok, invalid_listener_error = pcall(plugin.on_toggle, "not a function")
+assert(not invalid_listener_ok, "a non-function toggle listener must fail")
+assert(
+  tostring(invalid_listener_error):find("toggle listener must be a function", 1, true),
+  "invalid toggle-listener error is unclear"
+)
+local toggle_events = {}
+local unsubscribe_toggle = plugin.on_toggle(function(event) toggle_events[#toggle_events + 1] = event end)
 local state = plugin.open()
 local rendered = table.concat(vim.api.nvim_buf_get_lines(state.buf, 0, -1, false), "\n")
 assert(rendered:find("➕ " .. date.format(yesterday, "%d.%m.%Y"), 1, true), "creation date was not formatted")
@@ -813,6 +850,25 @@ for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(state.buf, -1, 0, -1, { deta
 end
 assert(highlight_groups.ObsidianTasksOverdue, "overdue task highlight is missing")
 assert_equal(highlight_groups.ObsidianTasksDueSoon, 2, "all due-soon tasks must use the warning highlight")
+
+local toggle_task = mapping_callback(state.buf, "Toggle task")
+assert(toggle_task, "toggle mapping is missing")
+for line, task in pairs(state.line_map) do
+  if task.text:find("Zulu", 1, true) then
+    vim.api.nvim_win_set_cursor(state.win, { line, 0 })
+    break
+  end
+end
+toggle_task()
+assert_equal(#toggle_events, 1, "successful completion did not publish a toggle event")
+assert_equal(toggle_events[1].done, true, "completion event has the wrong state")
+assert_equal(toggle_events[1].path, view_temp, "completion event has the wrong source path")
+assert(toggle_events[1].task.text:find("Zulu", 1, true), "completion event lost the original task")
+toggle_task()
+assert_equal(#toggle_events, 2, "successful reopen did not publish a toggle event")
+assert_equal(toggle_events[2].done, false, "reopen event has the wrong state")
+unsubscribe_toggle()
+unsubscribe_toggle()
 
 local status_notifications = {}
 local original_notify = vim.notify

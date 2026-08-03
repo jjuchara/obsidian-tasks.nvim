@@ -55,3 +55,9 @@ This release-facing log summarizes durable product and architecture constraints 
 - **Status:** Accepted
 - **Decision:** Keep `create()` fully interactive by default while allowing integrations to select a repository by name, prefill the editable task name, and append caller-owned description context before task metadata.
 - **Consequences:** An explicit repository bypasses active-view routing and the repository picker, preventing unrelated UI state from redirecting a task. Unknown repositories fail before mutation. The normal tag and date flow, cancellation behavior, atomic persistence, and undo remain unchanged.
+
+## D-010: Successful toggles publish an optional integration event
+
+- **Status:** Accepted
+- **Decision:** Let integrations subscribe through `on_toggle(callback)` to successful task-view checkbox writes without adding a required runtime dependency or serializing callback state into Markdown.
+- **Consequences:** Events are emitted only after guarded atomic persistence and include the original task plus resulting state and source evidence. Subscribers own their independent side effects and compensation semantics. Listener failure is visible but cannot roll back or relabel the already-successful task write; one-step task undo remains scoped to the task source mutation. Single-line HTML integration markers stay hidden in display/edit text and survive task edits.

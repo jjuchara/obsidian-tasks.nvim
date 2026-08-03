@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented here.
 
+## [0.12.0] - 2026-08-03
+
+### Added
+
+- Public `on_toggle(callback)` subscriptions now receive the original task, resulting checkbox
+  state, persisted source path/line, and new raw Markdown after every successful task-view toggle.
+  The returned unsubscribe function is idempotent; listener failures are reported without turning
+  a completed task write into a false failure.
+- Single-line HTML comments used as integration markers remain hidden in task display/edit text and
+  are preserved when the task is edited.
+
 ## [0.11.0] - 2026-07-31
 
 ### Added
@@ -203,7 +214,8 @@ All notable changes to this project will be documented here.
 - Atomic writes and stale-line protection.
 - English, Russian, and `:help` documentation.
 
-[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.8.0...v0.9.0

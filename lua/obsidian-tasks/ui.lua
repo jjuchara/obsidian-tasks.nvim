@@ -10,6 +10,7 @@ local states = {}
 local filter_picker_active = false
 local last_undo
 local create_callback
+local toggle_callback
 local task_flow_active = false
 
 _G.ObsidianTasksFoldText = function() return vim.fn.getline(vim.v.foldstart):gsub("▾ ", "▸ ", 1) end
@@ -149,7 +150,9 @@ local function render_node(node, depth, output, line_map, highlights, folds, fol
       output,
       line_map,
       highlights,
-      string.rep("  ", depth) .. checkbox .. date.format_text(task.text, state.config.dates.display_format),
+      string.rep("  ", depth)
+        .. checkbox
+        .. date.format_text(parser.display_text(task.text), state.config.dates.display_format),
       task_highlight(task, today),
       task
     )
@@ -391,6 +394,8 @@ function M.set_undo(undo) last_undo = undo end
 
 function M.set_create_callback(callback) create_callback = callback end
 
+function M.set_toggle_callback(callback) toggle_callback = callback end
+
 function M.set_task_flow_active(active) task_flow_active = active end
 
 function M.focus_all(target)
@@ -466,6 +471,19 @@ local function toggle(state)
   end
   last_undo = result.undo
   state.cursor_target = result
+  if toggle_callback then
+    local event = {
+      task = task,
+      done = not task.done,
+      path = result.path,
+      lnum = result.lnum,
+      raw = result.raw,
+    }
+    local callback_ok, callback_error = pcall(toggle_callback, event)
+    if not callback_ok then
+      notify("task toggle listener failed: " .. tostring(callback_error), vim.log.levels.ERROR)
+    end
+  end
   M.refresh_all()
 end
 

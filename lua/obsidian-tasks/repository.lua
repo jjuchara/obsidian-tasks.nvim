@@ -174,6 +174,9 @@ local function build_task_line(task, updated, options)
   local completion_marker = options.completion_marker or "✅"
   local checkbox = task.done and "[x]" or "[ ]"
   local line = (task.indent or "") .. "- " .. checkbox .. " " .. updated.text
+  if #(task.html_comments or {}) > 0 then
+    line = line .. " " .. table.concat(task.html_comments, " ")
+  end
   if #updated.tags > 0 then
     line = line .. " " .. table.concat(updated.tags, " ")
   end

@@ -176,6 +176,22 @@ prompt. `description_suffix` adds caller-owned context before tags and task
 metadata. Every field is optional, and an unknown explicit repository fails
 before mutation.
 
+Lua integrations may subscribe to successful task-view checkbox writes: >lua
+
+  local unsubscribe = require("obsidian-tasks").on_toggle(function(event)
+    if event.done then
+      vim.notify("completed: " .. event.task.text)
+    end
+  end)
+<
+The event includes the original parsed task, resulting boolean done, and the
+persisted path, lnum, and raw line. The returned unsubscribe function is
+idempotent. Listener errors are notified after persistence and do not roll
+back or misreport the task mutation.
+Single-line HTML comments can carry durable integration markers. Task display
+and edit input hide them, while a successful task edit preserves them in the
+Markdown source.
+
 Editing rewrites task text, tags, start date, and due date while preserving the
 checkbox state, creation date, and completion date. Clearing the due date
 writes `creation.infinity_marker`. Deleting asks for confirmation. The latest

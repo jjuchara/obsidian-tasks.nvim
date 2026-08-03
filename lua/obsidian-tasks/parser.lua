@@ -20,6 +20,16 @@ local function strip_tags(text) return text:gsub("#([^%s#%[%]%(%){}<>,!%?;:`]+)"
 
 local function compact_spaces(text) return vim.trim(text:gsub("%s+", " ")) end
 
+local function extract_html_comments(text)
+  local comments = {}
+  for comment in text:gmatch("<!%-%-.-%-%->") do
+    comments[#comments + 1] = comment
+  end
+  return comments
+end
+
+local function strip_html_comments(text) return text:gsub("<!%-%-.-%-%->", " ") end
+
 local function append_frontmatter_tag(tags, seen, value)
   local tag = vim.trim(value or ""):gsub("^['\"]", ""):gsub("['\"]$", ""):gsub("^#+", "")
   if tag ~= "" and not tag:find("%s") then
@@ -106,6 +116,7 @@ function M.parse_lines(lines, repository, path)
               start_date = text:match("🛫%s*(%d%d%d%d%-%d%d%-%d%d)"),
               due_date = text:match("📅%s*(%d%d%d%d%-%d%d%-%d%d)"),
               completion_date = text:match("✅%s*(%d%d%d%d%-%d%d%-%d%d)"),
+              html_comments = extract_html_comments(text),
             }
           end
         end
@@ -121,7 +132,7 @@ function M.extract_tags(text) return extract_tags(text) end
 
 function M.clean_task_text(text, options)
   options = options or {}
-  local result = text
+  local result = strip_html_comments(text)
   result = result:gsub("%s*➕%s*%d%d%d%d%-%d%d%-%d%d", "")
   result = result:gsub("%s*🛫%s*%d%d%d%d%-%d%d%-%d%d", "")
   result = result:gsub("%s*📅%s*%d%d%d%d%-%d%d%-%d%d", "")
@@ -133,6 +144,8 @@ function M.clean_task_text(text, options)
   end
   return compact_spaces(strip_tags(result))
 end
+
+function M.display_text(text) return compact_spaces(strip_html_comments(text)) end
 
 function M.parse_tag_input(input)
   local tags = {}

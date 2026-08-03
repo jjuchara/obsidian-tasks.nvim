@@ -221,6 +221,22 @@ context, such as an Obsidian wikilink, before tags and task metadata. All fields
 `create()` retains the normal interactive behavior. An unknown explicit repository fails before
 any task mutation.
 
+Integrations may also subscribe to successful task-view checkbox writes:
+
+```lua
+local unsubscribe = require("obsidian-tasks").on_toggle(function(event)
+  if event.done then
+    vim.notify("completed: " .. event.task.text)
+  end
+end)
+```
+
+The event contains the original parsed `task`, the resulting boolean `done`, and persisted `path`,
+`lnum`, and `raw` fields. `on_toggle()` returns an idempotent unsubscribe function. Listener errors
+are notified after persistence and do not roll back or misreport the task mutation.
+Single-line HTML comments can carry durable integration markers: the task view and edit prompt hide
+them, while a successful task edit preserves them in the Markdown source.
+
 Editing a task from the task view rewrites the Markdown task line while preserving the checkbox state, creation date, and completion date. Clearing the deadline stores the configured no-deadline marker.
 
 ## Markdown format

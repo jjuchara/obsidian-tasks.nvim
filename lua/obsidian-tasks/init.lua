@@ -7,6 +7,7 @@ local ui = require("obsidian-tasks.ui")
 
 local M = {}
 local config
+local toggle_listeners = {}
 
 local function repository_label(repo) return repo.alias or repo.name end
 
@@ -15,6 +16,15 @@ local function notify(message, level) vim.notify("obsidian-tasks: " .. message, 
 local function ensure_setup()
   if not config then
     error("obsidian-tasks: call setup() before using the plugin", 2)
+  end
+end
+
+local function emit_toggle(event)
+  for _, callback in ipairs(vim.deepcopy(toggle_listeners)) do
+    local ok, error_message = pcall(callback, event)
+    if not ok then
+      notify("task toggle listener failed: " .. tostring(error_message), vim.log.levels.ERROR)
+    end
   end
 end
 
@@ -349,6 +359,7 @@ end
 function M.setup(options)
   config = config_module.setup(options)
   ui.set_create_callback(M.create)
+  ui.set_toggle_callback(emit_toggle)
   local mappings = config.mappings
   if mappings.open then
     vim.keymap.set("n", mappings.open, M.open, { desc = "Obsidian tasks: open" })
@@ -357,6 +368,26 @@ function M.setup(options)
     vim.keymap.set("n", mappings.create, M.create, { desc = "Obsidian tasks: create" })
   end
   return config
+end
+
+function M.on_toggle(callback)
+  if type(callback) ~= "function" then
+    error("obsidian-tasks: toggle listener must be a function", 2)
+  end
+  toggle_listeners[#toggle_listeners + 1] = callback
+  local active = true
+  return function()
+    if not active then
+      return
+    end
+    active = false
+    for index, registered in ipairs(toggle_listeners) do
+      if registered == callback then
+        table.remove(toggle_listeners, index)
+        return
+      end
+    end
+  end
 end
 
 function M.open()
