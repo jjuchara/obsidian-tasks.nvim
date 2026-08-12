@@ -61,7 +61,7 @@ local function normalize_tag(tag, context)
 end
 
 local function normalize_relative_path(path, root)
-  path = vim.fn.expand(path)
+  path = vim.fs.normalize(path)
   if not path:match("^/") and not path:match("^%a:[/\\]") then
     path = vim.fs.joinpath(root, path)
   end

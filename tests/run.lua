@@ -381,6 +381,25 @@ local collector_config = config_module.setup({
 local collector_repo = collector_config.repositories[1]
 local collected = assert(repository.load(collector_repo))
 assert_equal(#collected, 3, "collector must combine the writable task file and source globs")
+
+local all_markdown_config = config_module.setup({
+  repositories = {
+    {
+      name = "all-markdown",
+      vault = collector_root,
+      todo_file = "Tasks/Tasks.md",
+      sources = { { glob = "**/*.md" } },
+    },
+  },
+})
+local all_markdown_repo = all_markdown_config.repositories[1]
+assert_equal(
+  all_markdown_repo.sources[1].glob,
+  vim.fs.joinpath(collector_root, "**/*.md"),
+  "source normalization must preserve wildcard patterns"
+)
+assert_equal(#assert(repository.load(all_markdown_repo)), 3, "recursive all-Markdown glob must collect every task file")
+
 local project_task = vim.iter(collected):find(function(task) return task.text:find("Project task", 1, true) end)
 local area_task = vim.iter(collected):find(function(task) return task.text:find("Area task", 1, true) end)
 assert(project_task, "project source task is missing")

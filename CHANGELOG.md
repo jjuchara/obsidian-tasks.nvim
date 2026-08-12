@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented here.
 
+## [0.12.1] - 2026-08-12
+
+### Fixed
+
+- Vault-wide source globs such as `**/*.md` are no longer expanded against Neovim's current working
+  directory during configuration, so they correctly collect tasks from the configured vault.
+
 ## [0.12.0] - 2026-08-03
 
 ### Added
@@ -216,7 +223,8 @@ All notable changes to this project will be documented here.
 - Atomic writes and stale-line protection.
 - English, Russian, and `:help` documentation.
 
-[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.12.1...HEAD
+[0.12.1]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/jjuchara/obsidian-tasks.nvim/compare/v0.9.0...v0.10.0

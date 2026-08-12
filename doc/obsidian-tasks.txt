@@ -217,6 +217,9 @@ Collected source tasks retain the path and line number of their real Markdown
 file. Toggle, edit, delete, undo, and source opening operate on that file. The
 collector does not execute Dataview and does not require Obsidian to be open.
 Source globs are evaluated in order; the first matching source owns a file.
+Wildcard patterns are preserved until they are resolved relative to the
+repository vault, so `**/*.md` scans the vault rather than Neovim's current
+working directory.
 
 =============================================================================
 CONFIGURATION                                            *obsidian-tasks-config*

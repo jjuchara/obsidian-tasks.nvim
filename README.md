@@ -263,7 +263,7 @@ When a task has no inline tag, the nearest `## #tag` heading is used as a fallba
 
 Collected tasks keep the path and line number of their original Markdown file. Toggle, edit, delete, undo, and `gf` therefore operate on the real source instead of a rendered or copied query result. This provides Dataview-style aggregation without executing Dataview or depending on a running Obsidian process.
 
-Source globs are evaluated in configuration order. If several globs match the same file, the first match owns it so the task is shown only once.
+Source globs are expanded only after they are resolved relative to the repository vault, so patterns such as `**/*.md` scan the vault rather than Neovim's current working directory. Globs are evaluated in configuration order. If several globs match the same file, the first match owns it so the task is shown only once.
 
 ## Multiple repositories
 
