@@ -2,7 +2,7 @@
 
 ## Project Knowledge
 
-- **The single source of truth for project knowledge is always the Russian documentation in Obsidian:** [obsidian task](</Users/jjuchara/Library/Mobile Documents/iCloud~md~obsidian/Documents/obsidian_jjuchara/1. Projects/obsidian task/00. obsidian task.md>). Open it with [obsidian task](obsidian://open?vault=obsidian_jjuchara&file=1.%20Projects%2Fobsidian%20task%2F00.%20obsidian%20task). Product thinking, planning, ideas, decisions, design, manual-testing evidence, and roadmap state live and are maintained there.
+- **The single source of truth for project knowledge is always the Russian documentation in Obsidian:** [obsidian task](</Users/jjuchara/Documents/MySecondBrain/1.%20Projects/obsidian%20task/00.%20obsidian%20task.md>). Open it with [obsidian task](obsidian://open?vault=obsidian_jjuchara&file=1.%20Projects%2Fobsidian%20task%2F00.%20obsidian%20task). Product thinking, planning, ideas, decisions, design, manual-testing evidence, and roadmap state live and are maintained there.
 - **This Git repository keeps only code-adjacent and release-facing documentation required by plugin users and contributors:** README, Vim help, CHANGELOG, CONTRIBUTING, LICENSE, and concise public snapshots of roadmap and architectural constraints. Repository-facing text stays in English; do not make the repository the canonical home for private project planning.
 - **Read `00. obsidian task.md` and the relevant files under `1. Projects/obsidian task/` before planning substantial work.** Use the repository's README, Vim help, and config defaults to verify the shipped public behavior, not to infer uncommitted product direction.
 - After meaningful code or behavior changes, update the affected Obsidian source-of-truth documents in Russian first, then refresh affected release-facing repository documents in English when the change is user-visible.
@@ -10,7 +10,7 @@
 
 ## Current State
 
-The latest stable release is `v0.12.0`. The plugin targets Neovim 0.10+, has no required runtime dependencies, and supports multi-repository views, source-glob collection with view-only PARA and project tags, ordered tag grouping and filtering, sorting, native folds, guided creation, explicit linked-task creation context and successful-toggle subscriptions for integrations, a default built-in calendar with two-way manual-input toggling, guarded task mutations, and one-step undo. Treat `README.md`, `doc/obsidian-tasks.txt`, and the defaults in `lua/obsidian-tasks/config.lua` as the public behavior contract, and the Obsidian project as the authority for roadmap and project state.
+The latest stable release is `v0.12.1`. The plugin targets Neovim 0.10+, has no required runtime dependencies, and supports multi-repository views, source-glob collection with view-only PARA and project tags, ordered tag grouping and filtering, sorting, native folds, guided creation, explicit linked-task creation context and successful-toggle subscriptions for integrations, a default built-in calendar with two-way manual-input toggling, guarded task mutations, and one-step undo. In `v0.12.1`, vault-wide globs including `**/*.md` are resolved against the configured vault rather than Neovim's current working directory. Treat `README.md`, `doc/obsidian-tasks.txt`, and the defaults in `lua/obsidian-tasks/config.lua` as the public behavior contract, and the Obsidian project as the authority for roadmap and project state.
 
 ## Project Structure & Module Organization
 
